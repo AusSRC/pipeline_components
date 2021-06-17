@@ -4,10 +4,10 @@ Containerised scripts for WALLABY science workflow processes.
 
 # Scripts
 
-## `generate_sofia_params.py`
+### `generate_sofia_params.py`
 
-## `generate_linmos_config.py`
+### `generate_linmos_config.py`
 
-## `casda_download.py`
+### `casda_download.py`
 
-## `database_credentials.py`
+### `database_credentials.py`
