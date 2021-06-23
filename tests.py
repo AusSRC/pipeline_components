@@ -47,7 +47,7 @@ class Testing(unittest.TestCase):
         local and remote testing.
 
         """
-        creds = "../credentials.ini"
+        creds = "credentials.ini"
         if os.path.isfile(creds):
             config = configparser.ConfigParser()
             config.read(creds)
