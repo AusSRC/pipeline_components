@@ -60,6 +60,8 @@ def read_environ():
     env = {}
     keys = [k for k in list(os.environ) if "SOFIA" in k]
     for k in keys:
+        if os.environ[k] == "null":
+            continue
         env[k] = os.environ[k]
     return env
 
