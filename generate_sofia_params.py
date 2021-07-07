@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import argparse
 import configparser
 from jinja2 import Template
-
-
-class ParseKwargs(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, dict())
-        for value in values:
-            key, value = value.split('=')
-            getattr(namespace, self.dest)[key] = value
 
 
 def parse_args(argv):
@@ -46,15 +39,6 @@ def parse_args(argv):
         help="SoFiA parameter file default values",
         default="/app/templates/sofia.ini"
     )
-    parser.add_argument(
-        '-p',
-        '--params',
-        nargs='*',
-        help="Values for SoFiA parameters",
-        required=False,
-        action=ParseKwargs,
-        default=None
-    )
     args = parser.parse_args(argv)
     return args
 
@@ -67,6 +51,17 @@ def read_defaults(f):
     config.optionxform = str
     config.read(f)
     return dict(config.items("DEFAULT"))
+
+
+def read_environ():
+    """Read parameter inputs from environment variables
+
+    """
+    env = {}
+    keys = [k for k in list(os.environ) if "SOFIA" in k]
+    for k in keys:
+        env[k] = os.environ[k]
+    return env
 
 
 def main(argv):
@@ -89,9 +84,11 @@ def main(argv):
     defaults = read_defaults(args.defaults)
     defaults['SOFIA_OUTPUT_DIRECTORY'] = args.filename.rsplit('/', 1)[0]
 
+    env = read_environ()
+
     # Update template with parameters
-    if args.params is not None:
-        params = {**defaults, **args.params}
+    if env is not None:
+        params = {**defaults, **env}
         params = {**params, **data}
     else:
         params = {**defaults, **data}

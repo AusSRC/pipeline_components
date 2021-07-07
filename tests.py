@@ -195,13 +195,13 @@ class Testing(unittest.TestCase):
         """
         output = io.StringIO()
         sys.stdout = output
+        os.environ["SOFIA_PIPELINE_VERBOSE"] = "true"
 
         generate_sofia_params.main([
             "-i", "/mnt/shared/test.fits",
             "-f", SOFIA_PARAMS,
             "-d", "templates/sofia.ini",
             "-t", "templates/sofia.j2",
-            "-p", "SOFIA_PIPELINE_VERBOSE=1"
         ])
 
         # 1. Config generated
