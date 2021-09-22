@@ -19,6 +19,11 @@ linmos.outweight    = $OUTFILE.weights
 linmos.weighttype   = FromWeightImages
 linmos.weightstate  = Corrected
 linmos.psfref       = 0
+linmos.imagetype    = fits
+linmos.imageaccess  = collective
+linmos.imageaccess.axis  = 3
+linmos.imageaccess.order = distributed
+linmos.imageaccess.write = parallel
 """.strip()
 
 
