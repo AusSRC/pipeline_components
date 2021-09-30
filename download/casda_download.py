@@ -94,7 +94,7 @@ def parse_args(argv):
     parser.add_argument(
         "-pr",
         "--project",
-        type=str
+        type=str,
         required=True,
         help="Science project name for file search."
     )
@@ -131,7 +131,7 @@ def tap_query(query):
     """Query CASDA for download files. Return the result.
 
     """
-    casdatap = TapPlus(url=URL, verbose=True)
+    casdatap = TapPlus(url=URL, verbose=False)
     job = casdatap.launch_job_async(query)
     query_result = job.get_results()
     return query_result
