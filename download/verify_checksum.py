@@ -41,7 +41,7 @@ def calculate_checksum(filename):
 
 def main():
     """Perform checksum comparison for image cube and weight
-    files downloaded from CASDA. Code adapted from 
+    files downloaded from CASDA. Code adapted from
     https://github.com/csiro-rds/casda_data_access/blob/master/script/calc_checksum.sh
 
     First checks weights checksum. If not equal then will exit (failure).

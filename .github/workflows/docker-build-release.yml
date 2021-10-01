@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'
       
 jobs:
-  docker-build-and-push:
+  casda_download:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -22,5 +22,41 @@ jobs:
       - 
         run: |
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
-          docker build . --file Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/wallaby_scripts:$RELEASE_VERSION
-          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/wallaby_scripts:$RELEASE_VERSION
+          docker build . --file download/Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:$RELEASE_VERSION
+          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:$RELEASE_VERSION
+  mosaicking:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - 
+        name: Set release version
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - 
+        name: Build the Docker image
+        uses: actions/checkout@v2
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - 
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
+          docker build . --file mosaicking/Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mosaicking_components:$RELEASE_VERSION
+          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mosaicking_components:$RELEASE_VERSION
+  source_finding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - 
+        name: Set release version
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - 
+        name: Build the Docker image
+        uses: actions/checkout@v2
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - 
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
+          docker build . --file source_finding/Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/source_finding_components:$RELEASE_VERSION
+          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/source_finding_components:$RELEASE_VERSION

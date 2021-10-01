@@ -5,12 +5,11 @@ import sys
 import io
 import configparser
 import unittest
-from unittest.mock import patch
+from source_finding import generate_sofia_params, database_credentials
 
-import casda_download
-import generate_linmos_config
-import generate_sofia_params
-import database_credentials
+
+SOFIA_PARAMS = "sofia.par"
+SOFIAX_CONFIG = "config.ini"
 
 
 class SourceFindingTests(unittest.TestCase):
@@ -41,8 +40,6 @@ class SourceFindingTests(unittest.TestCase):
             config.write(f)
 
     def tearDown(self):
-        if os.path.isfile(LINMOS_CONFIG):
-            os.remove(LINMOS_CONFIG)
         if os.path.isfile(SOFIA_PARAMS):
             os.remove(SOFIA_PARAMS)
         if os.path.isfile(SOFIAX_CONFIG):
@@ -62,8 +59,8 @@ class SourceFindingTests(unittest.TestCase):
         generate_sofia_params.main([
             "-i", "/mnt/shared/test.fits",
             "-f", SOFIA_PARAMS,
-            "-d", "templates/sofia.ini",
-            "-t", "templates/sofia.j2",
+            "-d", "source_finding/templates/sofia.ini",
+            "-t", "source_finding/templates/sofia.j2",
         ])
 
         # 1. Config generated
@@ -90,8 +87,8 @@ class SourceFindingTests(unittest.TestCase):
         generate_sofia_params.main([
             "-i", "/mnt/shared/test.fits",
             "-f", SOFIA_PARAMS,
-            "-d", "templates/sofia.ini",
-            "-t", "templates/sofia.j2"
+            "-d", "source_finding/templates/sofia.ini",
+            "-t", "source_finding/templates/sofia.j2"
         ])
 
         # 1. Config generated

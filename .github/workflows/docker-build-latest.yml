@@ -3,7 +3,7 @@ name: Docker build latest
 on: [push]
 
 jobs:
-  docker-build-and-push:
+  download:
     runs-on: ubuntu-latest
     steps:
       - name: Build the Docker image
@@ -13,5 +13,29 @@ jobs:
             password: ${{ secrets.DOCKERHUB_TOKEN }}
       - run: |
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
-          docker build . --file Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/wallaby_scripts:latest
-          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/wallaby_scripts:latest
+          docker build . --file download/Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:latest
+          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:latest
+  mosaicking:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build the Docker image
+        uses: actions/checkout@v2
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
+          docker build . --file mosaicking/Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mosaicking_components:latest
+          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mosaicking_components:latest
+  source_finding:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build the Docker image
+        uses: actions/checkout@v2
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
+          docker build . --file source_finding/Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/source_finding_components:latest
+          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/source_finding_components:latest

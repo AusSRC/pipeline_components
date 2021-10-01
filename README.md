@@ -7,7 +7,7 @@
 
 # Overview
 
-A repository for components used as part of the ASKAP science project post-processing workflows. The workflows can be accessed here
+A repository for the Nextflow components used as part of the ASKAP science project post-processing workflows. The workflows can be found here
 
 * [WALLABY](https://github.com/AusSRC/WALLABY_workflows)
 * [POSSUM](https://github.com/AusSRC/POSSUM_workflows)
@@ -17,9 +17,9 @@ A repository for components used as part of the ASKAP science project post-proce
 
 # Components
 
-## CASDA Download
+## Download
 
-The CASDA download component scripts are used to retrieve image cubes from CASDA to the AusSRC slurm cluster for processing. Both WALLABY and POSSUM make use of this component. It includes scripts for verifying the checksum of the downloaded file.
+The download components are used for downloading image cubes from CASDA into the AusSRC slurm cluster for processing, and for performing a checksum on the downloaded cube. Both WALLABY and POSSUM make use of this component.
 
 ## Mosaicking
 
