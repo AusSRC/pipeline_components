@@ -5,22 +5,6 @@ import argparse
 from jinja2 import Template
 
 
-CONFIG = """
-linmos.names        = $CUBES
-linmos.weights      = $WEIGHTS
-linmos.imagetype    = fits
-linmos.outname      = $OUTFILE
-linmos.outweight    = $OUTFILE.weights
-linmos.weighttype   = FromWeightImages
-linmos.weightstate  = Corrected
-linmos.psfref       = 0
-linmos.imageaccess  = collective
-linmos.imageaccess.axis  = 3
-linmos.imageaccess.order = distributed
-linmos.imageaccess.write = parallel
-""".strip()
-
-
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -38,53 +22,58 @@ def parse_args(argv):
         help="Output filename and directory for mosiacked image cubes.",
     )
     parser.add_argument(
+        "-t",
+        "--template",
+        type=str,
+        required=False,
+        help="Jinja template file for the linmos configuration.",
+        default="/app/templates/linmos_config.j2"
+    )
+    parser.add_argument(
         "-c",
         "--config",
         type=str,
         required=True,
         help="Filename and path for linmos configuration.",
     )
-    parser.add_argument(
-        "-t",
-        "--config_template",
-        type=str,
-        required=False,
-        help="Template configuration file content (string).",
-        default=CONFIG
-    )
     args = parser.parse_args(argv)
     return args
-
-
-def write_file(filename, content):
-    """Wrapping file writing in function for testing purposes.
-
-    """
-    with open(filename, 'w') as f:
-        f.writelines(content)
 
 
 def main(argv):
     """Create a linmos configuration file from the image cubes and
     weights downloaded from CASDA.
 
-    TODO(austin): use templating library
-
     """
     args = parse_args(argv)
+    config_values = {
+        "LINMOS_IMAGE_TYPE": "fits",
+        "LINMOS_WEIGHT_TYPE": "FromWeightImages",
+        "LINMOS_WEIGHT_STATE": "Corrected",
+        "LINMOS_PSFREF": "0",
+        "LINMOS_IMAGE_ACCESS": "collective",
+        "LINMOS_IMAGE_ACCESS_AXIS": "3",
+        "LINMOS_IMAGE_ACCESS_ORDER": "distributed",
+        "LINMOS_IMAGE_ACCESS_WRITE": "parallel"
+    }
 
+    # Overwrite template
+    with open(args.template, 'r') as f:
+        template = Template(f.read())
+
+    # Provide arguments to template
     cubes = args.input.replace('.fits', '')
-    weights = cubes\
+    config_values["LINMOS_NAMES"] = cubes
+    config_values["LINMOS_WEIGHTS"] = cubes\
         .replace('image.restored', 'weights')\
         .replace('.contsub', '')
+    config_values["LINMOS_OUTNAME"] = args.filename
+    config_values["LINMOS_OUTWEIGHT"] = f"{args.filename}.weights"
 
-    content = args.config_template\
-        .replace('$CUBES', cubes)\
-        .replace('$WEIGHTS', weights)\
-        .replace('$OUTFILE', args.filename)
-
-    write_file(args.config, content)
-    print(args.config, end='')
+    config = template.render(config_values)
+    with open(args.config, 'w') as f:
+        f.writelines(config)
+    print(args.config, end="")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Update database credentials in the config.ini file for SoFiAX execution
 
-"""
-
-import os
 import sys
 import argparse
 import configparser
@@ -49,6 +45,9 @@ def parse_args(argv):
 
 
 def main(argv):
+    """Update database credentials in the config.ini file for SoFiAX execution
+
+    """
     # get args
     args = parse_args(argv)
 
