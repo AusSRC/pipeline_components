@@ -22,7 +22,7 @@ jobs:
       - 
         run: |
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
-          docker build download --file Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:$RELEASE_VERSION
+          docker build download --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:$RELEASE_VERSION
           docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:$RELEASE_VERSION
   mosaicking:
     runs-on: ubuntu-latest
@@ -40,7 +40,7 @@ jobs:
       - 
         run: |
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
-          docker build mosaicking --file Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mosaicking_components:$RELEASE_VERSION
+          docker build mosaicking --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mosaicking_components:$RELEASE_VERSION
           docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/mosaicking_components:$RELEASE_VERSION
   source_finding:
     runs-on: ubuntu-latest
@@ -58,5 +58,5 @@ jobs:
       - 
         run: |
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
-          docker build source_finding --file Dockerfile --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/source_finding_components:$RELEASE_VERSION
+          docker build source_finding --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/source_finding_components:$RELEASE_VERSION
           docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/source_finding_components:$RELEASE_VERSION
