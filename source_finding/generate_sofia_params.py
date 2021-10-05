@@ -93,6 +93,11 @@ def main(argv):
     defaults = read_defaults(args.defaults)
     defaults['SOFIA_OUTPUT_DIRECTORY'] = args.output
 
+    # Check output directory exists or create
+    exists = os.path.isdir(args.output)
+    if not exists:
+        os.mkdir(args.output)
+
     env = read_environ()
 
     # Update template with parameters
