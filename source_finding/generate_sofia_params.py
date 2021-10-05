@@ -17,6 +17,13 @@ def parse_args(argv):
         help="Input file for mosaicked image cube.",
     )
     parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Output directory for sofia products."
+    ),
+    parser.add_argument(
         "-f",
         "--filename",
         type=str,
@@ -84,7 +91,7 @@ def main(argv):
 
     # Get default values
     defaults = read_defaults(args.defaults)
-    defaults['SOFIA_OUTPUT_DIRECTORY'] = args.filename.rsplit('/', 1)[0]
+    defaults['SOFIA_OUTPUT_DIRECTORY'] = args.output
 
     env = read_environ()
 
