@@ -5,7 +5,7 @@ import sys
 import io
 import configparser
 import unittest
-from source_finding import generate_sofia_params, database_credentials
+from source_finding import database_credentials
 
 
 SOFIA_PARAMS = "sofia.par"
@@ -44,61 +44,6 @@ class SourceFindingTests(unittest.TestCase):
             os.remove(SOFIA_PARAMS)
         if os.path.isfile(SOFIAX_CONFIG):
             os.remove(SOFIAX_CONFIG)
-
-    def test_generate_sofia_params(self):
-        """Test to ensure a sofia parameter file is generated correctly.
-        Asserts the following:
-            1. Parameter file is generated
-            2. Output (stdout) is the configuration filename.
-
-        """
-        output = io.StringIO()
-        sys.stdout = output
-        os.environ["SOFIA_PIPELINE_VERBOSE"] = "true"
-
-        generate_sofia_params.main([
-            "-i", "/mnt/shared/test.fits",
-            "-f", SOFIA_PARAMS,
-            "-d", "source_finding/templates/sofia.ini",
-            "-t", "source_finding/templates/sofia.j2",
-        ])
-
-        # 1. Config generated
-        self.assertTrue(os.path.isfile(SOFIA_PARAMS))
-
-        # 2. Stdout
-        sys.stdout = sys.__stdout__
-        self.assertEqual(
-            output.getvalue(), SOFIA_PARAMS, f"Output was {repr(output.getvalue())}"  # noqa
-        )
-
-    def test_generate_sofia_params_no_params(self):
-        """Test to ensure a sofia parameter file is generated correctly even
-        when no custom parameters are passed.
-
-        Asserts the following:
-            1. Parameter file is generated
-            2. Output (stdout) is the configuration filename.
-
-        """
-        output = io.StringIO()
-        sys.stdout = output
-
-        generate_sofia_params.main([
-            "-i", "/mnt/shared/test.fits",
-            "-f", SOFIA_PARAMS,
-            "-d", "source_finding/templates/sofia.ini",
-            "-t", "source_finding/templates/sofia.j2"
-        ])
-
-        # 1. Config generated
-        self.assertTrue(os.path.isfile(SOFIA_PARAMS))
-
-        # 2. Stdout
-        sys.stdout = sys.__stdout__
-        self.assertEqual(
-            output.getvalue(), SOFIA_PARAMS, f"Output was {repr(output.getvalue())}"  # noqa
-        )
 
     def test_sofiax_config_write(self):
         """Assert that database credentials are updated with the

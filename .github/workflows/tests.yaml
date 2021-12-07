@@ -22,6 +22,6 @@ jobs:
       - run: pip3 install -r download/requirements.txt
       - run: pip3 install -r mosaicking/requirements.txt
       - run: pip3 install -r source_finding/requirements.txt
-      - run: python3 -m unittest tests/casda_download.py
+      # - run: python3 -m unittest tests/casda_download.py
       - run: python3 -m unittest tests/mosaicking.py
       - run: python3 -m unittest tests/source_finding.py
