@@ -2,7 +2,6 @@
 
 import os
 import sys
-import logging.config
 import argparse
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
@@ -93,9 +92,9 @@ def main(argv):
 
     # download cubes
     SBIDS = ', '.join(f"'{str(i)}'" for i in args.input)
-    query = args.query.replace("$SBIDS", str(SBIDS))
+    query = args.query.replace("$SBIDS", str(SBIDS)).replace('"', "'")
     res = tap_query(query)
-    files = download(res, args.output, args.username, args.password)
+    download(res, args.output, args.username, args.password)
 
 
 if __name__ == "__main__":
