@@ -2,10 +2,14 @@
 
 import os
 import sys
-import logging.config
+import logging
 import argparse
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
+
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.INFO)
 
 
 # TODO(austin): obs_collection as argument
@@ -67,18 +71,21 @@ def tap_query(query):
     casdatap = TapPlus(url=URL, verbose=False)
     job = casdatap.launch_job_async(query)
     query_result = job.get_results()
+    logging.info(f'CASDA download query TAP result: {query_result}')
     return query_result
 
 
 def download(query_result, output, username, password):
-    """Download CASDA data cubes from archive.
+    """Get staging URL and use CURL to download
     TODO(austin): CASDA bug still causing issues - use this once fixed.
     download_files = casda.download_files(url_list, savedir=args.output)
 
     """
     casda = Casda(username, password)
-    url_list = casda.stage_data(query_result)
+    url_list = casda.stage_data(query_result, verbose=True)
+    logging.info(f'CASDA download staged data URLs: {url_list}')
     downloads = list(map(lambda x: f"{output}/{x.split('/')[-1]}", url_list))
+    sys.exit()
     for (link, f) in zip(url_list, downloads):
         os.system(f"curl -o {f} {link}")
     return downloads
@@ -93,9 +100,16 @@ def main(argv):
 
     # download cubes
     SBIDS = ', '.join(f"'{str(i)}'" for i in args.input)
+    logging.info(f'CASDA download started for the following scheduling block IDs: {SBIDS}')  # noqa
     query = args.query.replace("$SBIDS", str(SBIDS))
+    logging.info(f'CASDA download submitting query: {query}')
+
     res = tap_query(query)
-    files = download(res, args.output, args.username, args.password)
+    print(type(res))
+    for row in res:
+        print(row['access_url'])
+
+    download(res, args.output, args.username, args.password)
 
 
 if __name__ == "__main__":
