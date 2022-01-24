@@ -105,10 +105,6 @@ def main(argv):
     logging.info(f'CASDA download submitting query: {query}')
 
     res = tap_query(query)
-    print(type(res))
-    for row in res:
-        print(row['access_url'])
-
     download(res, args.output, args.username, args.password)
 
 
