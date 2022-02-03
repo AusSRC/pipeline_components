@@ -137,3 +137,7 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 credentials.ini
+
+# pre-check local files
+mom0_mosaicks
+run.py
