@@ -5,11 +5,12 @@ import os
 import numpy as np
 from astropy.io import fits
 
-if len(sys.argv) != 2:
-	sys.stderr.write("\n Usage: wallmerge.py cube1,cube2\n\n");
+if len(sys.argv) != 3:
+	sys.stderr.write("\n Usage: wallmerge.py cube1,cube2 <OUTPUT_FILE>\n\n");
 	sys.exit(1);
 
 filename_cubes = sys.argv[1].split(',');
+output_file = sys.argv[2];
 
 try:
 	hdu_cubes = [fits.open(url) for url in filename_cubes];
@@ -66,5 +67,5 @@ for cube in range(len(hdu0_cubes)):
 	hdu_cubes[cube].close();
 
 # Write output cube
-hdu_data_out.writeto("wallmerge_output_cube.fits", overwrite=True)
+hdu_data_out.writeto(output_file, overwrite=True)
 print(" - Output cube written")
