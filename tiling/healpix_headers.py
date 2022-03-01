@@ -84,7 +84,7 @@ def main(argv):
     ]
     for ra in ra_array:
         for dec in dec_array:
-            filename = f"{args.output_directory}/{round(ra, 2)}_{round(dec, 2)}.hdr"
+            filename = f"{args.output}/{round(ra, 2)}_{round(dec, 2)}.hdr"
             pixel = hp.ang2pix(args.NSIDE, ra, dec, nest=False, lonlat=True)
             RA, DEC = hp.pix2ang(nside=args.NSIDE, ipix=pixel, nest=False, lonlat=True)
             create_healpix_fits_headers(RA, DEC, filename)
