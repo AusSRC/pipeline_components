@@ -44,10 +44,8 @@ def create_healpix_fits_headers(ra, dec, filename):
     del hdu.header['EXTEND']
 
     # Write to .hdr file (override default)
-    if os.path.exists(filename):
-        os.remove(filename)
-    hdul = fits.HDUList([hdu])
-    hdul.writeto(filename)
+    with open(filename, 'w') as f:
+        f.write(hdu.header.tostring())
 
     return
 
