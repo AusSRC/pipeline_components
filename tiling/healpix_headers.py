@@ -12,7 +12,7 @@ def parse_args(argv):
     parser.add_argument('-n', '--NSIDE', type=int, required=False, default=32)
     parser.add_argument('-i', '--input', type=str, help='Input image cube', required=True)
     parser.add_argument(
-        '-o', '--output', type=str, help='Output directory for .hdr files', required=False
+        '-o', '--output_directory', type=str, help='Output directory for .hdr files', required=False
     )
     args = parser.parse_args(argv)
     return args
@@ -35,7 +35,7 @@ def create_healpix_fits_headers(ra, dec, filename):
     hdu.header.set('CD1_2', -6.8664550781250E-04)
     hdu.header.set('CD2_1', -6.8664550781250E-04)
     hdu.header.set('CD2_2', -6.8664550781250E-04)
-    hdu.header.set('CTYPE1', 'RA--HPX', 'Longitude in a HPX projection')
+    hdu.header.set('CTYPE1', 'RA---HPX', 'Longitude in a HPX projection')
     hdu.header.set('CTYPE2', 'DEC--HPX', 'Latitude in a HPX projection')
     hdu.header.set('CRVAL1', ra, '[deg]')
     hdu.header.set('CRVAL2', dec, '[deg]')
@@ -44,8 +44,9 @@ def create_healpix_fits_headers(ra, dec, filename):
     del hdu.header['EXTEND']
 
     # Write to .hdr file (override default)
+    lines = hdu.header.tostring(sep='\n').strip().split('\n')
     with open(filename, 'w') as f:
-        f.write(hdu.header.tostring())
+        f.writelines(f'{line}\n' for line in lines)
 
     return
 
@@ -82,9 +83,9 @@ def main(argv):
     ]
     for ra in ra_array:
         for dec in dec_array:
-            filename = f"{args.output}/{round(ra, 2)}_{round(dec, 2)}.hdr"
             pixel = hp.ang2pix(args.NSIDE, ra, dec, nest=False, lonlat=True)
             RA, DEC = hp.pix2ang(nside=args.NSIDE, ipix=pixel, nest=False, lonlat=True)
+            filename = f"{args.output_directory}/{round(RA, 2)}_{round(DEC, 2)}.hdr"
             create_healpix_fits_headers(RA, DEC, filename)
 
 
