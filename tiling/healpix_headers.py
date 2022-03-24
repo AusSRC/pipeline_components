@@ -19,10 +19,9 @@ def parse_args(argv):
 
 
 def create_healpix_fits_headers(ra, dec, filename):
-    """Write .hdr fits headers for a Healpix reprojected image cube.
-
+    """Function for creating FITS header files for reprojected POSSUM cubes
+    
     """
-    # TODO(austin): what are these constants and do they always apply to the POSSUM cubes?
     # Set header
     hdu = fits.PrimaryHDU()
     hdu.header.set('BITPIX', -32)
@@ -42,12 +41,12 @@ def create_healpix_fits_headers(ra, dec, filename):
     hdu.header.set('PV2_1', 4, 'HPX H parameter (longitude)')
     hdu.header.set('PV2_2', 3, 'HPX K parameter (latitude)')
     del hdu.header['EXTEND']
-
-    # Write to .hdr file (override default)
+    
+    # Write to .hdr file
     lines = hdu.header.tostring(sep='\n').strip().split('\n')
     with open(filename, 'w') as f:
         f.writelines(f'{line}\n' for line in lines)
-
+    
     return
 
 
