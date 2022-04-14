@@ -4,12 +4,14 @@ import os
 import sys
 import logging
 import argparse
+import astropy
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
 
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
+astropy.utils.iers.conf.auto_download = False
 
 
 # TODO(austin): obs_collection as argument
@@ -85,7 +87,6 @@ def download(query_result, output, username, password):
     url_list = casda.stage_data(query_result, verbose=True)
     logging.info(f'CASDA download staged data URLs: {url_list}')
     downloads = list(map(lambda x: f"{output}/{x.split('/')[-1]}", url_list))
-    sys.exit()
     for (link, f) in zip(url_list, downloads):
         os.system(f"curl -o {f} {link}")
     return downloads
