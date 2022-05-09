@@ -7,9 +7,6 @@ from source_finding import update_sofiax_config
 
 
 class TestUpdateSoFiAXConfig(unittest.TestCase):
-    """Tests of CASDA download components.
-
-    """
     def setUp(self):
         """Verify SoFiAX config file exists. Set run_name parameter to default.
 
@@ -20,7 +17,6 @@ class TestUpdateSoFiAXConfig(unittest.TestCase):
             config.optionxform = str
             config.read(self.sofiax_config)
             config.set('SoFiAX', "run_name", "default")
-
             with open(self.sofiax_config, 'w') as f:
                 config.write(f)
         else:
