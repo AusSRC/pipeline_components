@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import argparse
 import healpy as hp
@@ -16,7 +15,6 @@ def parse_args(argv):
     )
     args = parser.parse_args(argv)
     return args
-
 
 def create_healpix_fits_headers(ra, dec, filename):
     """Function for creating FITS header files for reprojected POSSUM cubes
@@ -41,14 +39,13 @@ def create_healpix_fits_headers(ra, dec, filename):
     hdu.header.set('PV2_1', 4, 'HPX H parameter (longitude)')
     hdu.header.set('PV2_2', 3, 'HPX K parameter (latitude)')
     del hdu.header['EXTEND']
-    
+
     # Write to .hdr file
     lines = hdu.header.tostring(sep='\n').strip().split('\n')
     with open(filename, 'w') as f:
         f.writelines(f'{line}\n' for line in lines)
-    
-    return
 
+    return
 
 def main(argv):
     """Generates .hdr files for an image cube with Healpix reprojection
@@ -90,3 +87,4 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
+
