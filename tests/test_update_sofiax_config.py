@@ -38,6 +38,7 @@ class TestUpdateSoFiAXConfig(unittest.TestCase):
 
         update_sofiax_config.main([
             "--config", self.sofiax_config,
+            "--output", self.sofiax_config,
             "--run_name", run_name,
         ])
 

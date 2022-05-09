@@ -14,7 +14,14 @@ def parse_args(argv):
         "--config",
         type=str,
         required=True,
-        help="Path to SoFiAX configuration file"
+        help="Path to template SoFiAX configuration file"
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Output SoFiAX configuration file for the specific run.",
     )
     parser.add_argument("--db_hostname ", type=str, required=False)
     parser.add_argument("--db_name", type=str, required=False)
@@ -49,7 +56,7 @@ def main(argv):
             config.set('SoFiAX', arg, val)
 
     # write
-    with open(args.config, 'w') as f:
+    with open(args.output, 'w') as f:
         config.write(f)
 
 

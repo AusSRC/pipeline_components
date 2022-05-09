@@ -17,7 +17,14 @@ def parse_args(argv):
         "--config",
         type=str,
         required=True,
-        help="Filename and path for linmos configuration.",
+        help="Input template file for linmos configuration.",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Filename and path for output linmos configuration.",
     )
     parser.add_argument("--linmos.names", type=str, required=False)
     parser.add_argument("--linmos.weights", type=str, required=False)
@@ -78,7 +85,7 @@ def main(argv):
     with open(LINMOS_CONFIG_TEMPLATE, 'r') as f:
         template = Template(f.read())
     config = template.render(config_dict)
-    with open(args.config, 'w') as f:
+    with open(args.output, 'w') as f:
         f.writelines(config)
 
     return

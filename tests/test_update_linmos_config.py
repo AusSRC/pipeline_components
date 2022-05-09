@@ -66,6 +66,7 @@ class TestUpdateLinmosConfig(unittest.TestCase):
         files = "[image.restored.SB400.cube.contsub.fits,image.restored.SB500.cube.contsub.fits]"  # noqa
         update_linmos_config.main([
             "--config", self.linmos_config,
+            "--output", self.linmos_config,
             "--linmos.names", files
         ])
 
