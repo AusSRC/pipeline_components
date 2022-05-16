@@ -79,7 +79,11 @@ def main(argv):
     keys = tmp_dict.keys()
     for k in keys:
         k_new = k.upper().replace('.', '_')
-        config_dict[k_new] = tmp_dict[k]
+        value_new = tmp_dict[k]
+        # remove .fits extension in filenames
+        if k == 'linmos.names' or k == 'linmos.weights' or k == 'linmos.outname' or k == 'linmos.outweight':
+            value_new = value_new.replace('.fits', '')
+        config_dict[k_new] = value_new
 
     # Read template and override linmos config
     with open(LINMOS_CONFIG_TEMPLATE, 'r') as f:

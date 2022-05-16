@@ -71,7 +71,7 @@ class TestUpdateLinmosConfig(unittest.TestCase):
         ])
 
         updated_config = self.read_config_to_dict(self.linmos_config)
-        self.assertEqual(updated_config['linmos.names'], files)
+        self.assertEqual(updated_config['linmos.names'], files.replace('.fits', ''))
 
 
 if __name__ == "__main__":
