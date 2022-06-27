@@ -5,6 +5,7 @@ import sys
 import logging
 import argparse
 import astropy
+import configparser
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
 
@@ -12,6 +13,7 @@ from astroquery.casda import Casda
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 astropy.utils.iers.conf.auto_download = False
+
 
 
 # TODO(austin): obs_collection as argument
@@ -39,20 +41,12 @@ def parse_args(argv):
         help="Output directory for downloaded files.",
     )
     parser.add_argument(
-        "-u",
-        "--username",
+        "-c",
+        "--credentials",
         type=str,
-        required=True,
-        help="CASDA account username.",
-        default=None
-    )
-    parser.add_argument(
-        "-p",
-        "--password",
-        type=str,
-        required=True,
-        help="CASDA account password.",
-        default=None
+        required=False,
+        help="CASDA credentials config file.",
+        default='./casda.ini'
     )
     parser.add_argument(
         "-q",
@@ -86,9 +80,11 @@ def download(query_result, output, username, password):
     casda = Casda(username, password)
     url_list = casda.stage_data(query_result, verbose=True)
     logging.info(f'CASDA download staged data URLs: {url_list}')
-    downloads = list(map(lambda x: f"{output}/{x.split('/')[-1]}", url_list))
+    downloads = list(map(lambda x: f"{output}/{x.split('/')[-1].split('?')[0]}", url_list))
     for (link, f) in zip(url_list, downloads):
-        os.system(f"curl -o {f} {link}")
+        cmd = f"curl -o {f} {link}"
+        logging.info(cmd)
+        os.system(cmd)
     return downloads
 
 
@@ -98,6 +94,8 @@ def main(argv):
 
     """
     args = parse_args(argv)
+    parser = configparser.ConfigParser()
+    parser.read(args.credentials)
 
     # download cubes
     SBIDS = ', '.join(f"'{str(i)}'" for i in args.input)
@@ -106,7 +104,7 @@ def main(argv):
     logging.info(f'CASDA download submitting query: {query}')
 
     res = tap_query(query)
-    download(res, args.output, args.username, args.password)
+    download(res, args.output, parser['CASDA']['username'], parser['CASDA']['password'])
 
 
 if __name__ == "__main__":
