@@ -80,7 +80,7 @@ def download(query_result, output, username, password):
     casda = Casda(username, password)
     url_list = casda.stage_data(query_result, verbose=True)
     logging.info(f'CASDA download staged data URLs: {url_list}')
-    download_files = casda.download_files(url_list, savedir=output)
+    downloads = casda.download_files(url_list, savedir=output)
     return downloads
 
 
