@@ -15,7 +15,6 @@ logging.getLogger().setLevel(logging.INFO)
 astropy.utils.iers.conf.auto_download = False
 
 
-
 # TODO(austin): obs_collection as argument
 URL = "https://casda.csiro.au/casda_vo_tools/tap"
 DEFAULT_QUERY = "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND (" \
@@ -60,30 +59,6 @@ def parse_args(argv):
     return args
 
 
-def tap_query(query):
-    """Query CASDA for download files. Return the result.
-
-    """
-    casdatap = TapPlus(url=URL, verbose=False)
-    job = casdatap.launch_job_async(query)
-    query_result = job.get_results()
-    logging.info(f'CASDA download query TAP result: {query_result}')
-    return query_result
-
-
-def download(query_result, output, username, password):
-    """Get staging URL and use CURL to download
-    TODO(austin): CASDA bug still causing issues - use this once fixed.
-    download_files = casda.download_files(url_list, savedir=args.output)
-
-    """
-    casda = Casda(username, password)
-    url_list = casda.stage_data(query_result, verbose=True)
-    logging.info(f'CASDA download staged data URLs: {url_list}')
-    downloads = casda.download_files(url_list, savedir=output)
-    return downloads
-
-
 def main(argv):
     """Downloads image cubes from CASDA matching the observing block IDs
     provided in the arguments.
@@ -93,14 +68,21 @@ def main(argv):
     parser = configparser.ConfigParser()
     parser.read(args.credentials)
 
-    # download cubes
+    # submit TAP query
     SBIDS = ', '.join(f"'{str(i)}'" for i in args.input)
     logging.info(f'CASDA download started for the following scheduling block IDs: {SBIDS}')  # noqa
     query = args.query.replace("$SBIDS", str(SBIDS))
     logging.info(f'CASDA download submitting query: {query}')
+    casdatap = TapPlus(url=URL, verbose=False)
+    job = casdatap.launch_job_async(query)
+    query_result = job.get_results()
+    logging.info(f'CASDA download query TAP result: {query_result}')
 
-    res = tap_query(query)
-    download(res, args.output, parser['CASDA']['username'], parser['CASDA']['password'])
+    # stage and download
+    casda = Casda(parser['CASDA']['username'], parser['CASDA']['password'])
+    url_list = casda.stage_data(query_result, verbose=True)
+    logging.info(f'CASDA download staged data URLs: {url_list}')
+    casda.download_files(url_list, savedir=args.output)
 
 
 if __name__ == "__main__":
