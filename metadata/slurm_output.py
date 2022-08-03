@@ -88,6 +88,7 @@ def main(argv):
         casda_parser['CASDA']['password']
     )
     url_list = casda.stage_data(t)
+    logging.info(f'Staging files {url_list}')
     filelist = casda.download_files(url_list, savedir=args.output)
     logging.info(f'Downloaded files {filelist}')
 
@@ -98,22 +99,32 @@ def main(argv):
         tar.extractall(args.output)
     slurm_logs = glob.glob(f"{compressed_files[0].replace('.tar', '')}/slurmOutput/*")
     slurm_logs.sort()
-    latest_slurm_log = slurm_logs[-1]
+    logging.info(f'Slurm log files: {slurm_logs}')
 
-    # parse and construct parameter dictionary
-    with open(latest_slurm_log, 'r') as f:
-        config_string = '[SLURM]\n' + f.read()
-    log_parser = configparser.ConfigParser(strict=False, allow_no_value=True)
-    log_parser.read_string(config_string)
     config = {}
-    keys = list(log_parser['SLURM'].keys())
-    for key in keys:
-        try:
-            value = log_parser['SLURM'].get(key)
-            config[key] = value
-        except Exception as e:
-            logging.warning(f"Unable to parse config item {key} with error: {e}")
-    logging.info(f'Constructed slurmOutput: {config}')
+    if len(slurm_logs) == 0:
+        logging.error(f'No slurmOutput log files found for SBID={args.sbid}')
+    else:
+        # parse and construct parameter dictionary
+        latest_slurm_log = slurm_logs[-1]
+        logging.info(f'Reading slurm log file {latest_slurm_log}')
+        config_string = '[SLURM]\n'
+        with open(latest_slurm_log, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if ('=' in line) and (line[0] == '#'):
+                    config_string += line
+
+        log_parser = configparser.ConfigParser(strict=False, allow_no_value=True)
+        log_parser.read_string(config_string)
+        keys = list(log_parser['SLURM'].keys())
+        for key in keys:
+            try:
+                value = log_parser['SLURM'].get(key)
+                config[key] = value
+            except Exception as e:
+                logging.warning(f"Unable to parse config item {key} with error: {e}")
+        logging.info(f'Constructed slurmOutput: {config}')
 
     # add to database
     conn = psycopg2.connect(
