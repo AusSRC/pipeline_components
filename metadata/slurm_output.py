@@ -71,12 +71,17 @@ def main(argv):
 
     # get did
     res = requests.get(f"{DID_URL}{args.sbid}")
-    did = res.json()[0]
-    logging.info(f'Data identifier: {did}')
+    logging.info(f'Response: {res.json()}')
+    # TODO(austin): what does it mean to have multiple evaluation files?
+    evaluation_files = [f for f in res.json() if 'evaluation' in f]
+    evaluation_files.sort()
+    if not evaluation_files:
+        raise Exception(f"No evaluation files found for SBID={args.sbid}")
+    logging.info(f'Identifier: {evaluation_files[-1]}')
 
     # stage and download
     t = Table()
-    t['access_url'] = [f'{EVAL_URL}{did}']
+    t['access_url'] = [f'{EVAL_URL}{evaluation_files[-1]}']
     logging.info(f'Downloading from: {t}')
     casda = Casda(
         casda_parser['CASDA']['username'],
