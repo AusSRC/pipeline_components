@@ -1,0 +1,5 @@
+astropy
+astroquery
+asyncpg
+packaging
+psycopg2-binary

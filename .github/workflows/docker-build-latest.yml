@@ -15,6 +15,18 @@ jobs:
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
           docker build download --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:latest
           docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/casda_download_components:latest
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build the Docker image
+        uses: actions/checkout@v2
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
+          docker build metadata --tag docker.io/${{ secrets.DOCKERHUB_USERNAME }}/observation_metadata:latest
+          docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/observation_metadata:latest
   mosaicking:
     runs-on: ubuntu-latest
     steps:
