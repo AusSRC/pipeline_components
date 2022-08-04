@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import json
-import glob
 import tarfile
 import requests
 import argparse
@@ -77,54 +77,74 @@ def main(argv):
     evaluation_files.sort()
     if not evaluation_files:
         raise Exception(f"No evaluation files found for SBID={args.sbid}")
-    logging.info(f'Identifier: {evaluation_files[-1]}')
 
-    # stage and download
-    t = Table()
-    t['access_url'] = [f'{EVAL_URL}{evaluation_files[-1]}']
-    logging.info(f'Downloading from: {t}')
     casda = Casda(
         casda_parser['CASDA']['username'],
         casda_parser['CASDA']['password']
     )
+
+    # Download evaluation files
+    # TODO(austin): may not be necessary to download all evaluation files at once
+    logging.info(f'Downloading evaluation files: {evaluation_files}')
+    t = Table()
+    t['access_url'] = [f'{EVAL_URL}{f}' for f in evaluation_files]
+    logging.info(f'Downloading from: {t}')
     url_list = casda.stage_data(t)
     logging.info(f'Staging files {url_list}')
     filelist = casda.download_files(url_list, savedir=args.output)
     logging.info(f'Downloaded files {filelist}')
 
-    # unpack
-    compressed_files = [f for f in filelist if 'checksum' not in f]
-    logging.info(f'Unpacking file {compressed_files[0]}')
-    with tarfile.open(compressed_files[0]) as tar:
-        tar.extractall(args.output)
-    slurm_logs = glob.glob(f"{compressed_files[0].replace('.tar', '')}/slurmOutput/*")
-    slurm_logs.sort()
-    logging.info(f'Slurm log files: {slurm_logs}')
+    # check content for slurm logs
+    slurm_logs_map = {}
+    tarfiles = [f for f in filelist if 'checksum' not in f]
+    for tf in tarfiles:
+        with tarfile.open(tf) as tar:
+            files = [ti.name for ti in tar.getmembers() if 'slurmOutput/pipelineConfig' in ti.name]
+            for f in files:
+                slurm_logs_map[f] = tf
 
+    slurm_logs = list(slurm_logs_map.keys())
+    slurm_logs.sort(reverse=True)
+
+    # extract config
     config = {}
     if len(slurm_logs) == 0:
         logging.error(f'No slurmOutput log files found for SBID={args.sbid}')
     else:
-        # parse and construct parameter dictionary
-        latest_slurm_log = slurm_logs[-1]
-        logging.info(f'Reading slurm log file {latest_slurm_log}')
-        config_string = '[SLURM]\n'
-        with open(latest_slurm_log, 'r') as f:
-            lines = f.readlines()
-            for line in lines:
-                if ('=' in line) and (line[0] == '#'):
-                    config_string += line
+        logging.info(f'Slurm log files: {slurm_logs}')
+        for log in slurm_logs:
+            if not bool(config):
+                # extract if does not exist
+                if not os.path.exists(f'{args.output}/{log}'):
+                    with tarfile.open(slurm_logs_map[log]) as tar:
+                        tar.extractall(args.output)
 
-        log_parser = configparser.ConfigParser(strict=False, allow_no_value=True)
-        log_parser.read_string(config_string)
-        keys = list(log_parser['SLURM'].keys())
-        for key in keys:
-            try:
-                value = log_parser['SLURM'].get(key)
-                config[key] = value
-            except Exception as e:
-                logging.warning(f"Unable to parse config item {key} with error: {e}")
-        logging.info(f'Constructed slurmOutput: {config}')
+                # parse and construct parameter dictionary
+                logging.info(f'Reading slurm log file {args.output}/{log}')
+                config_string = '[SLURM]\n'
+                with open(f'{args.output}/{log}', 'r') as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        if ('=' in line) and (line[0] != '#'):
+                            config_string += line
+
+                log_parser = configparser.ConfigParser(
+                    strict=False,
+                    allow_no_value=True
+                )
+                logging.info(f'File content:\n{config_string}')
+                log_parser.read_string(config_string)
+                keys = list(log_parser['SLURM'].keys())
+                for key in keys:
+                    try:
+                        value = log_parser['SLURM'].get(key)
+                        config[key] = value
+                    except Exception as e:
+                        logging.warning(f"Unable to parse config item {key} with error: {e}")
+                logging.info(f'Constructed slurmOutput: {config}')
+            else:
+                logging.info('Logs extracted, writing to database')
+                break
 
     # add to database
     conn = psycopg2.connect(
@@ -143,8 +163,9 @@ def main(argv):
     cursor.execute(
         "INSERT INTO wallaby.observation_metadata (observation_id, slurm_output) \
         VALUES (%s, %s) \
-        ON CONFLICT DO NOTHING",
-        (obs_id, json.dumps(config))
+        ON CONFLICT (observation_id) \
+        DO UPDATE SET slurm_output = %s",
+        (obs_id, json.dumps(config), json.dumps(config))
     )
     conn.commit()
     logging.info("Updated wallaby.observation_metadata table with slurmOutput")
