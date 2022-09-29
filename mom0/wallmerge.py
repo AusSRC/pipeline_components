@@ -46,7 +46,7 @@ print("Output cube size: " + str(naxis_out));
 
 # Create empty output cube
 size_out = [naxis_out[axis] for axis in range(axes)];
-cube_out = np.full(list(reversed(size_out)), np.nan, dtype=np.float32);
+cube_out = np.full(list(reversed(size_out)), 0.0, dtype=np.float32);
 hdu_data_out = fits.PrimaryHDU(data=cube_out, header=hdu0_cubes[0].header);
 
 # Update reference pixel
@@ -60,7 +60,7 @@ for cube in range(len(hdu0_cubes)):
 	print("- Input cube " + str(cube) + " position: " + str(pix_min) + " - " + str(pix_max));
 	
 	slc = tuple([slice(pix_min[axes - axis - 1], pix_max[axes - axis - 1], 1) for axis in range(axes)]);
-	cube_out[slc] = hdu0_cubes[cube].data;
+	cube_out[slc] += hdu0_cubes[cube].data;
 
 # Close input files again
 for cube in range(len(hdu0_cubes)):
