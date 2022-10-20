@@ -99,7 +99,7 @@ async def add_optical_counterpart(conn, product_id, mom0, dry_run=False):
             plt.close()
             if not dry_run:
                 await conn.execute(
-                    'UPDATE wallaby.product SET optical=$1 WHERE id=$2',
+                    'UPDATE wallaby.product SET plot=$1 WHERE id=$2',
                     optical,
                     product_id
                 )
@@ -135,6 +135,8 @@ async def main(argv):
         'SELECT * FROM wallaby.run WHERE name=$1',
         args.run
     )
+    if run is None:
+        raise Exception(f"Run with name {args.run} could not be found") 
     logging.info(f"Adding DSS images to detection products in run {args.run}")
     detections = await conn.fetch(
         'SELECT * FROM wallaby.detection WHERE run_id=$1',
@@ -149,7 +151,7 @@ async def main(argv):
             'SELECT * FROM wallaby.product WHERE detection_id=$1',
             int(d['id'])
         )
-        if product['optical'] is None:
+        if product['plot'] is None:
             await add_optical_counterpart(conn, int(product['id']), product['mom0'], args.dry_run)
         else:
             logging.info('Existing optical image - skipping')
