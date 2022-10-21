@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import logging
 import argparse
@@ -17,20 +16,31 @@ astropy.utils.iers.conf.auto_download = False
 
 # TODO(austin): obs_collection as argument
 URL = "https://casda.csiro.au/casda_vo_tools/tap"
-DEFAULT_QUERY = "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND (" \
-    "filename LIKE 'weights.i.%.cube.fits' OR " \
+WALLABY_QUERY = (
+    "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND "
+    "dataproduct_type='cube' AND ("
+    "filename LIKE 'weights.i.%.cube.fits' OR "
     "filename LIKE 'image.restored.i.%.cube.contsub.fits')"
+)
+POSSUM_QUERY = (
+    "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND "
+    "dataproduct_type='cube' AND ("
+    "filename LIKE 'image.restored.i.%.contcube.fits' OR "
+    "filename LIKE 'weights.i.%.contcube.fits' OR "
+    "filename LIKE 'image.restored.q.%.contcube.fits' OR "
+    "filename LIKE 'image.restored.u.%.contcube.fits')"
+)
 
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-i',
-        '--input',
+        "-i",
+        "--input",
         type=int,
         required=True,
-        nargs='+',
-        help='List of observing block numbers.'
+        nargs="+",
+        help="List of scheduling block id numbers.",
     )
     parser.add_argument(
         "-o",
@@ -40,23 +50,48 @@ def parse_args(argv):
         help="Output directory for downloaded files.",
     )
     parser.add_argument(
+        "-p",
+        "--project",
+        type=str,
+        required=True,
+        help="ASKAP project name (WALLABY or POSSUM).",
+    )
+    parser.add_argument(
         "-c",
         "--credentials",
         type=str,
         required=False,
         help="CASDA credentials config file.",
-        default='./casda.ini'
-    )
-    parser.add_argument(
-        "-q",
-        "--query",
-        type=str,
-        required=False,
-        help="CASDA TAP search query.",
-        default=DEFAULT_QUERY,
+        default="./casda.ini",
     )
     args = parser.parse_args(argv)
     return args
+
+
+def tap_query(project, sbids):
+    """Return astropy table with query result (files to download)"""
+
+    if project == "WALLABY":
+        SBIDS = ", ".join(f"'{str(i)}'" for i in sbids)
+        logging.info(f"Scheduling block IDs: {SBIDS}")
+        query = WALLABY_QUERY.replace("$SBIDS", str(SBIDS))
+        query = query.replace("$SURVEY", str(project))
+        logging.info(f"TAP Query: {query}")
+    elif project == "POSSUM":
+        SBIDS = ", ".join(f"'{str(i)}'" for i in sbids)
+        logging.info(f"Scheduling block IDs: {SBIDS}")
+        query = POSSUM_QUERY.replace("$SBIDS", str(SBIDS))
+        query = query.replace("$SURVEY", str(project))
+        logging.info(f"TAP Query: {query}")
+    else:
+        raise Exception(
+            'Unexpected project name provided ("WALLABY" or "POSSUM" currently supported).'
+        )
+    casdatap = TapPlus(url=URL, verbose=False)
+    job = casdatap.launch_job_async(query)
+    res = job.get_results()
+    logging.info(f"Query result: {res}")
+    return res
 
 
 def main(argv):
@@ -65,23 +100,14 @@ def main(argv):
 
     """
     args = parse_args(argv)
-    parser = configparser.ConfigParser()
-    parser.read(args.credentials)
-
-    # submit TAP query
-    SBIDS = ', '.join(f"'{str(i)}'" for i in args.input)
-    logging.info(f'CASDA download started for the following scheduling block IDs: {SBIDS}')  # noqa
-    query = args.query.replace("$SBIDS", str(SBIDS))
-    logging.info(f'CASDA download submitting query: {query}')
-    casdatap = TapPlus(url=URL, verbose=False)
-    job = casdatap.launch_job_async(query)
-    query_result = job.get_results()
-    logging.info(f'CASDA download query TAP result: {query_result}')
+    res = tap_query(args.project, args.input)
 
     # stage and download
-    casda = Casda(parser['CASDA']['username'], parser['CASDA']['password'])
-    url_list = casda.stage_data(query_result, verbose=True)
-    logging.info(f'CASDA download staged data URLs: {url_list}')
+    parser = configparser.ConfigParser()
+    parser.read(args.credentials)
+    casda = Casda(parser["CASDA"]["username"], parser["CASDA"]["password"])
+    url_list = casda.stage_data(res, verbose=True)
+    logging.info(f"CASDA download staged data URLs: {url_list}")
     casda.download_files(url_list, savedir=args.output)
 
 
