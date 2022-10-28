@@ -8,7 +8,9 @@ import asyncio
 import asyncpg
 import argparse
 import logging
+import warnings
 from dotenv import load_dotenv
+from functools import partial
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,10 +22,13 @@ from astropy.visualization import PercentileInterval
 from astroquery.skyview import SkyView
 
 
+warnings.filterwarnings('ignore')
 logging.basicConfig(level=logging.INFO)
 
 
 async def summary_plot(pool, detection, dry_run=False):
+    loop = asyncio.get_running_loop()
+
     # Get product
     async with pool.acquire() as conn:
         product = await conn.fetchrow(
@@ -39,7 +44,8 @@ async def summary_plot(pool, detection, dry_run=False):
     with io.BytesIO() as buf:
         buf.write(product["mom0"])
         buf.seek(0)
-        hdu_mom0 = fits.open(buf)[0]
+        hdu_mom0 = await loop.run_in_executor(None, partial(fits.open, buf))
+        hdu_mom0 = hdu_mom0[0]
         wcs = WCS(hdu_mom0.header)
         mom0 = hdu_mom0.data
 
@@ -47,14 +53,21 @@ async def summary_plot(pool, detection, dry_run=False):
     with io.BytesIO() as buf:
         buf.write(product["mom1"])
         buf.seek(0)
-        hdu_mom1 = fits.open(buf)[0]
+        hdu_mom1 = await loop.run_in_executor(None, partial(fits.open, buf))
+        hdu_mom1 = hdu_mom1[0]
         mom1 = hdu_mom1.data
 
     # Spectrum
     with io.BytesIO() as buf:
         buf.write(product["spec"])
         buf.seek(0)
-        spectrum = np.loadtxt(buf, dtype="float", comments="#", unpack=True)
+        spectrum = await loop.run_in_executor(None, partial(
+            np.loadtxt,
+            buf,
+            dtype="float",
+            comments="#",
+            unpack=True
+        ))
 
     # Extract coordinate information
     nx = hdu_mom0.header["NAXIS1"]
@@ -82,7 +95,8 @@ async def summary_plot(pool, detection, dry_run=False):
     )
 
     # Download DSS image from SkyView
-    hdu_opt = SkyView.get_images(
+    hdu_opt = await loop.run_in_executor(None, partial(
+        SkyView.get_images,
         position="{}d {}d".format(clon, clat),
         survey="DSS",
         coordinates="J2000",
@@ -91,7 +105,8 @@ async def summary_plot(pool, detection, dry_run=False):
         height=height * u.deg,
         cache=None,
         show_progress=False
-    )[0][0]
+    ))
+    hdu_opt = hdu_opt[0][0]
     wcs_opt = WCS(hdu_opt.header)
 
     # Plot moment 0
@@ -105,7 +120,7 @@ async def summary_plot(pool, detection, dry_run=False):
     ax2.set_title("moment 0")
 
     # Add beam size
-    e = Ellipse((5, 5), 5, 5, 0, edgecolor="peru", facecolor="peru")
+    e = Ellipse((5, 5), width=5, height=5, angle=0, edgecolor="peru", facecolor="peru")
     ax2.add_patch(e)
 
     # Plot DSS image with HI contours
@@ -228,7 +243,7 @@ async def main(argv):
     # Iterate over detections
     task_list = []
     for i, d in enumerate(detections):
-        logging.info(f"{i}/{len(detections)}")
+        logging.info(f"{i + 1}/{len(detections)}")
         task = asyncio.create_task(summary_plot(pool, d, args.dry_run))
         task_list.append(task)
 
