@@ -241,12 +241,13 @@ def get_footprint_id(filename):
     return filename.split("_")[-1].split(".")[0]
 
 
-if __name__ == "__main__":
+def main(argv):
     parser = argparse.ArgumentParser("Generate files defining Healpix tiles.")
     parser.add_argument('-f', dest='file', help='Footprint file')
     parser.add_argument('-o', dest='output', help='Output file prefix')
     parser.add_argument("-j", dest="json", help="The JSON file for configuration.")
-    args = parser.parse_args(sys.argv[1:])
+    args = parser.parse_args(argv)
+    print(args)
 
     # read config
     with open(args.json, "r") as read_file:
@@ -380,3 +381,7 @@ if __name__ == "__main__":
         generate_DS9_polygons(
             healpix_pixel=HPX_PIXELS, nside=Nside, outname_prefix=args.output
         )
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

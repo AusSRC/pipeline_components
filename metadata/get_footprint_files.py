@@ -62,7 +62,7 @@ def main(argv):
 
     if not footprint_file:
         raise Exception('No footprint files found in the evaluation files.')
-    print(footprint_file)
+    print(footprint_file, end='')
     return
 
 
