@@ -95,30 +95,19 @@ def download_evaluation_files(sbid, project_code, username, password, output):
     filelist = casda.download_files(url_list, savedir=output)
     logging.info(f'Downloaded files {filelist}')
 
-    compressed = [f for f in filelist if (('checksum' not in f) & ('.tar' in f))]
-    out_dirs = []
-    for f in compressed:
-        out_dir = f.rsplit('.', 1)[0]
-        logging.info(f'Extracting {f} to {out_dir}')
-        out_dirs.append(out_dir)
-        os.system(f'tar -xvf {f} -C {out_dir}')
-
-    return out_dirs
-
 
 def main(argv):
     args = parse_args(argv)
     casda_parser = configparser.ConfigParser()
     casda_parser.read(args.credentials)
 
-    output = download_evaluation_files(
+    download_evaluation_files(
         args.sbid,
         args.project_code,
         casda_parser['CASDA']['username'],
         casda_parser['CASDA']['password'],
         args.output
     )
-    print(output)
 
 
 if __name__ == '__main__':
