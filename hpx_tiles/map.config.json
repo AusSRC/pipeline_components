@@ -5,9 +5,5 @@
     "beam_radius": 1.2,
     "beam_sample_points": 16,
     "number_of_beams": 36,
-    "generate_ds9regions": false,
-    "outfile_prefix": "tmp/PoSSUM",
-    "path_footprints": "/Users/she393/Documents/SkyTiles/evaluation/metadata/",
-    "run_all_footprints": false,
-    "footprint_files": ["footprintOutput-sb10040-POSSUM_2156-54.txt"]
+    "generate_ds9regions": false
 }

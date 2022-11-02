@@ -1,0 +1,5 @@
+{
+    "tile_template": "/Users/she393/Documents/SkyTiles/data/tile-template.fits",
+    "naxis": 2048,
+    "tile_prefix": "PoSSUM"
+}
