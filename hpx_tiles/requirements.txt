@@ -1,4 +1,3 @@
-cmake
 wheel
 pandas
 numpy

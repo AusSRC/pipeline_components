@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import numpy
 import pandas as pd
 from astropy_healpix import HEALPix
@@ -245,7 +246,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', dest='file', help='Footprint file')
     parser.add_argument('-o', dest='output', help='Output file prefix')
     parser.add_argument("-j", dest="json", help="The JSON file for configuration.")
-    args = parser.parse_args()
+    args = parser.parse_args(sys.argv[1:])
 
     # read config
     with open(args.json, "r") as read_file:
