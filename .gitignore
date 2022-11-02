@@ -141,6 +141,7 @@ credentials.ini
 # pre-check local files
 mom0_mosaicks
 run.py
-casda.ini
 test.txt
 *.env
+*.ini
+.vscode

@@ -1,5 +1,5 @@
 astropy
 astroquery
+asyncio
 asyncpg
 packaging
-psycopg2-binary
