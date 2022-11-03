@@ -39,7 +39,7 @@ def main(argv):
 
     # Add to header
     logging.info(f'Updated SBID card in header: {" ".join(sbid_set)}')
-    # TODO(austin): If longer than 80 characters will need to split this
+    # TODO(austin): If longer than 80 characters will need to split
     for f in args.image_cubes:
         with fits.open(f, mode='update') as hdu:
             hdr = hdu[0].header
