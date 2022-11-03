@@ -35,7 +35,10 @@ def main(argv):
                 sbid_list += sbids_str.split(' ')
 
     logging.info(f'Also adding SBIDs from existing image cubes {list(set(sbid_list))} to header')
-    sbid_set = list(set(sbid_list + args.sbids))
+    if args.sbids:
+        sbid_set = list(set(sbid_list + args.sbids))
+    else:
+        sbid_set = list(set(sbid_list))
 
     # Add to header
     logging.info(f'Updated SBID card in header: {" ".join(sbid_set)}')
