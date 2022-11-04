@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Add summary figure to 'plot' column for WALLABY.
+"""
+
 import io
 import os
 import sys
@@ -36,7 +40,9 @@ async def summary_plot(pool, detection, dry_run=False):
         )
 
     # Plot figure size
-    plt.figure()
+    plt.rcParams['font.family'] = ['serif']
+    plt.rcParams["figure.figsize"] = (8, 8)
+    fig = plt.figure()
     interval = PercentileInterval(95.0)
     interval2 = PercentileInterval(90.0)
 
@@ -175,8 +181,8 @@ async def summary_plot(pool, detection, dry_run=False):
     ax4.grid(True)
     ax4.set_xlim([xmin, xmax])
     ax4.set_ylim([ymin, ymax])
-    plt.rcParams["figure.figsize"] = (12, 12)
     plt.suptitle(detection["name"].replace("_", " ").replace("-", "−"), fontsize=16)
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.3)
 
     with io.BytesIO() as buf:
         plt.savefig(buf, format="png")
@@ -243,9 +249,13 @@ async def main(argv):
     # Iterate over detections
     task_list = []
     for i, d in enumerate(detections):
+        if i < 800:
+            continue
         logging.info(f"{i + 1}/{len(detections)}")
         task = asyncio.create_task(summary_plot(pool, d, args.dry_run))
         task_list.append(task)
+        if i > 1000:
+            break
 
     await asyncio.gather(*task_list)
 
