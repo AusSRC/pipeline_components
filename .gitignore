@@ -145,3 +145,5 @@ test.txt
 *.env
 *.ini
 .vscode
+*.fits
+.DS_Store
