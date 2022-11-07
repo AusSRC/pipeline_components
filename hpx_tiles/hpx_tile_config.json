@@ -1,9 +1,8 @@
 {
-    "HPX_nside": 32,
+    "nside": 32,
     "tile_naxis": 2048,
     "tile_cdelt": 0.0009710633897,
     "beam_radius": 1.2,
     "beam_sample_points": 16,
-    "number_of_beams": 36,
-    "generate_ds9regions": false
+    "number_of_beams": 36
 }

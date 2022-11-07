@@ -1,8 +1,26 @@
 #!/usr/bin/env python3
 
+"""
+This script generates tile footprints containing HealPix ID, CRPIX1/2 and CRVAL1/2.
+Inputs:
+    1. Footprint region files. Supports only .txt or reg. The region file name
+        should be something like name..._ID.reg/txt, where name can be anything the
+        user chose to name the footprints, and ID is the SB ID e.g. '2156-54' (corresponds
+        sb10040).
+    2. Tile setting. HealPix nside, image CDELT. See input json file 'AllSky-TileConfig.json.
+
+Output:
+    1. A csv file containing a list tile IDs and the corresponding SBs. This file is used
+        to identify HealPix pixels that finds contribution from multiple SBs.
+    2. A csv file for each SB containg pixes parameters (CRPIX) used for generating tiles.
+
+Author: Lerato
+"""
+
 import os
 import sys
 import numpy
+import logging
 import pandas as pd
 from astropy_healpix import HEALPix
 from astropy.coordinates import Angle
@@ -15,24 +33,7 @@ import argparse
 import csv
 
 
-"""
-
-This script generates tile footprints containing HealPix ID, CRPIX1/2 and CRVAL1/2.
-Inputs:
-    1. Footprint region files. Supports only .txt or reg. The region file name
-        should be something like name..._ID.reg/txt, where name can be anything the
-        user chose to name the footprints, and ID is the SB ID e.g. '2156-54' (corresponds
-        sb10040).
-    2. Tile setting. HealPix Nside, image CDELT. See input json file 'AllSky-TileConfig.json.
-
-Output:
-    1. A csv file containing a list tile IDs and the corresponding SBs. This file is used
-        to identify HealPix pixels that finds contribution from multiple SBs.
-    2. A csv file for each SB containg pixes parameters (CRPIX) used for generating tiles.
-
-Author: Lerato
-
-"""
+logging.basicConfig(level=logging.INFO)
 
 
 def hms2deg(hms):
@@ -44,7 +45,6 @@ def hms2deg(hms):
 
 
 def dms2deg(dms):
-
     """Converts unit from dms to degrees"""
 
     d, m, s = dms.split(":")
@@ -53,7 +53,6 @@ def dms2deg(dms):
 
 
 def get_deg(hms_array, dms_array):
-
     """Converts unit of an array from hms to degrees"""
 
     conversion_hms = []
@@ -65,7 +64,6 @@ def get_deg(hms_array, dms_array):
 
 
 def points_within_circle(x0, y0, radius, num_points=4):
-
     """
     Samples the primary beams to determine the tiles.
 
@@ -91,8 +89,7 @@ def points_within_circle(x0, y0, radius, num_points=4):
     return x_corners, y_corners
 
 
-def get_HealPix_Tiles(ra_deg, dec_deg):
-
+def get_healpix_tiles(ra_deg, dec_deg):
     """Determines healpix tiles for the beam sampled points"""
 
     SB_index = hp.lonlat_to_healpix(
@@ -104,7 +101,6 @@ def get_HealPix_Tiles(ra_deg, dec_deg):
 
 
 def generate_DS9_polygons(healpix_pixel, nside, outname_prefix):
-
     """
     Option function: for the extracted tiles, it generates the
     ds9 region files.
@@ -162,7 +158,6 @@ def generate_DS9_polygons(healpix_pixel, nside, outname_prefix):
 
 
 def reference_header(naxis, cdelt):
-
     """
     Reference header centred at (0, 0) in a healpix grid.
     This is important as it allows us to properly determine
@@ -205,7 +200,6 @@ def reference_header(naxis, cdelt):
 
 
 def HPX_in_degrees(HPX, HPX_wcs):
-
     """
     Determines HealPix pixel
     reference center coordinates.
@@ -241,48 +235,64 @@ def get_footprint_id(filename):
     return filename.split("_")[-1].split(".")[0]
 
 
-def main(argv):
+def parse_args(argv):
     parser = argparse.ArgumentParser("Generate files defining Healpix tiles.")
-    parser.add_argument('-f', dest='file', help='Footprint file')
-    parser.add_argument('-o', dest='output', help='Output file prefix')
-    parser.add_argument("-j", dest="json", help="The JSON file for configuration.")
+    parser.add_argument('-f', dest='file', help='Footprint file', required=True)
+    parser.add_argument('-o', dest='output', help='Output file prefix', required=True)
+    parser.add_argument('-j', dest='json', help='The healpix tile configuration file [json].', required=True)
+    parser.add_argument(
+        '-r', dest='regions', action='store_true', help='Generate DS9 regions', default=False, required=False
+    )
+
+    # optional
+    parser.add_argument(
+        "-p", dest="prefix", type=str, help='Prefix for output tile filenames', required=False, default='hpx_pixel_map'
+    )
     args = parser.parse_args(argv)
-    print(args)
+    return args
+
+
+def main(argv):
+    args = parse_args(argv)
+    logging.info(args)
 
     # read config
-    with open(args.json, "r") as read_file:
-        tile_config = json.load(read_file)
+    if not os.path.exists(args.json):
+        raise Exception(f'Healpix tile configuration file not found at {args.json}')
+    with open(args.json, 'r') as f:
+        tile_config = json.load(f)
 
-    Nside = tile_config["HPX_nside"]
+    footprint = args.file
+    if not os.path.exists(footprint):
+        raise Exception(f'Footprint file not found at {footprint}')
+    logging.info(f'Footprint file: {footprint}')
+
+    # healpix tile configuration and beam information
+    nside = tile_config["nside"]
     beam_radius = tile_config["beam_radius"]
     beam_sample_points = tile_config["beam_sample_points"]
-    Naxis = tile_config["tile_naxis"]
-    Cdelt = tile_config["tile_cdelt"]
+    naxis = tile_config["tile_naxis"]
+    cdelt = tile_config["tile_cdelt"]
     number_of_beams = tile_config["number_of_beams"]
-    generate_ds9regions = tile_config["generate_ds9regions"]
 
     # globalizing Healpix definition.
     global hp
-    hp = HEALPix(nside=Nside, order="ring", frame="icrs")
+    hp = HEALPix(nside=nside, order="ring", frame="icrs")
 
-    print("Number of pixels for nside %d is %d. " % (Nside, hp.npix))
-    print("HealPix pixel resolution for nside %d is %s." % (Nside, hp.pixel_resolution))
+    logging.info("Number of pixels for nside %d is %d. " % (nside, hp.npix))
+    logging.info("HealPix pixel resolution for nside %d is %s." % (nside, hp.pixel_resolution))
 
-    HPX_ID_Pixels = {}
-    HPX_Pixels = []
-    HPX_ID = []
+    hpx_id_pixels = {}
+    hpx_pixels = []
+    footprint_ids = []
 
-    footprint = args.file
     footprint_id = get_footprint_id(footprint)
     extension = footprint.rsplit('.', 1)[1]
-
     if extension == "reg":
-
         footprint_region = pyregion.open(footprint)
         x_deg = [r.coord_list[0] for r in footprint_region]
         y_deg = [r.coord_list[1] for r in footprint_region]
-
-    if extension == "txt":
+    elif extension == "txt":
         footprint_region = pd.read_csv(footprint, header=None, sep=")")
         x_deg = [
             footprint_region[1][i].split(",")[0] for i in range(number_of_beams)
@@ -291,34 +301,35 @@ def main(argv):
             footprint_region[1][i].split(",")[1] for i in range(number_of_beams)
         ]
         x_deg, y_deg = get_deg(x_deg, y_deg)
+    else:
+        raise Exception(f'Unexpected extension for footprint file {footprint}')
 
-        beam_x_corner_sample, beam_y_corner_sample = points_within_circle(
-            x_deg, y_deg, beam_radius, num_points=beam_sample_points
-        )
-
-        HealPixels = get_HealPix_Tiles(
-            ra_deg=beam_x_corner_sample, dec_deg=beam_y_corner_sample
-        )
-
-        HPX_Pixels.append(HealPixels)
-        HPX_ID.append(footprint_id)
-        HPX_ID_Pixels.update({"%s" % footprint_id: HealPixels})
+    beam_x_corner_sample, beam_y_corner_sample = points_within_circle(
+        x_deg, y_deg, beam_radius, num_points=beam_sample_points
+    )
+    healpixels = get_healpix_tiles(
+        ra_deg=beam_x_corner_sample, dec_deg=beam_y_corner_sample
+    )
+    hpx_pixels.append(healpixels)
+    footprint_ids.append(footprint_id)
+    hpx_id_pixels.update({"%s" % footprint_id: healpixels})
 
     # read the reference header to estimate pixel centers in degrees, J2000.
-    HPX_hdr = reference_header(naxis=Naxis, cdelt=Cdelt)
+    HPX_hdr = reference_header(naxis=naxis, cdelt=cdelt)
     HPX_hdr = fits.Header.fromstring("""%s""" % HPX_hdr, sep="\n")
     HPX_wcs = WCS(HPX_hdr)
+    crpix_ra, crpix_dec, hpx_ra, hpx_dec = HPX_in_degrees(hpx_pixels, HPX_wcs)
 
-    crpix_ra, crpix_dec, hpx_ra, hpx_dec = HPX_in_degrees(HPX_Pixels, HPX_wcs)
-
-    for i in range(len(HPX_ID)):
-        csv_tile_output = args.output + "_%s.csv" % footprint_id
-
+    # TODO: loop not necessary
+    # iterate over pixels to write pixel map
+    for i in range(len(footprint_ids)):
+        csv_filename = "%s_%s.csv" % (args.prefix, footprint_id)
+        csv_tile_output = os.path.join(args.output, csv_filename)
+        logging.info(f'Writing pixel map to {csv_tile_output}')
         with open(csv_tile_output, "w", newline="") as f:
             writer = csv.writer(f)
-
             data = [
-                tuple(HPX_Pixels[i].tolist()),
+                tuple(hpx_pixels[i].tolist()),
                 tuple(crpix_ra[i].tolist()),
                 tuple(crpix_dec[i].tolist()),
                 tuple(hpx_ra[i].tolist()),
@@ -335,22 +346,19 @@ def main(argv):
             writer.writerow(csv_header)
             writer.writerows(data_zip)
 
-    HPX_PIXELS = numpy.unique(numpy.hstack(HPX_Pixels))  # all HPX tiles.
+    HPX_PIXELS = numpy.unique(numpy.hstack(hpx_pixels))  # all HPX tiles.
 
     SBsID = []
     SBs_HPX = []
-
     for hpxs in HPX_PIXELS:
-        for SBid in HPX_ID:
-            if hpxs in set(HPX_ID_Pixels[SBid]):
+        for SBid in footprint_ids:
+            if hpxs in set(hpx_id_pixels[SBid]):
                 SBs_HPX.append((hpxs))
                 SBsID.append(SBid)
 
     csv_repeat_tiles = args.output + "_REPEAT.csv"
-
     with open(csv_repeat_tiles, "w", newline="") as f:
         writer = csv.writer(f)
-
         data = []
         j = 0
         for hpx in numpy.unique(SBs_HPX):
@@ -377,10 +385,13 @@ def main(argv):
             # delete
             os.remove(csv_repeat_tiles)
 
-    if generate_ds9regions:
+    if args.regions:
+        logging.info('Writing DS9 region files')
         generate_DS9_polygons(
-            healpix_pixel=HPX_PIXELS, nside=Nside, outname_prefix=args.output
+            healpix_pixel=HPX_PIXELS, nside=nside, outname_prefix=os.path.join(args.output, args.prefix)
         )
+
+    print(footprint_id, end='')
 
 
 if __name__ == '__main__':

@@ -23,7 +23,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(argv):
-    # Load configuration
     parser = argparse.ArgumentParser("Generate tiles for a specfic SB.")
     parser.add_argument("-i", dest="obs_id", help="Observation ID.", required=True)
     parser.add_argument("-c", dest="cube", help="Image cube.", required=True)
@@ -31,7 +30,7 @@ def parse_args(argv):
     parser.add_argument("-o", dest="output", help="Output write directory for tiles cubes.", required=True)
     parser.add_argument("-t", dest="template", help="The template fits file.", required=True)
 
-    # TODO: naxis for tiling description
+    # Optional
     parser.add_argument("-n", dest="naxis", type=int, required=False, default=2048)
     parser.add_argument("-p", dest="prefix", type=str, help='Prefix for output tile filenames', required=False, default='PoSSUM')
     args = parser.parse_args(argv)
