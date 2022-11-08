@@ -32,7 +32,9 @@ def parse_args(argv):
 
     # Optional
     parser.add_argument("-n", dest="naxis", type=int, required=False, default=2048)
-    parser.add_argument("-p", dest="prefix", type=str, help='Prefix for output tile filenames', required=False, default='PoSSUM')
+    parser.add_argument(
+        "-p", dest="prefix", type=str, help='Prefix for output tile filenames', required=False, default='PoSSUM'
+    )
     args = parser.parse_args(argv)
     return args
 
@@ -138,7 +140,7 @@ def main(argv):
                 else:
                     template_header["shap"] = np.array([naxis, naxis, 1])
 
-            output_filename = "%s-%s-%d.image" % (prefix, args.obs_id, pixel_ID[i])
+            output_filename = "%s_%s-%d.image" % (prefix, args.obs_id, pixel_ID[i])
             output_name = os.path.join(write_dir, output_filename)
 
             # tiling, outputs tile fits in CASA image.

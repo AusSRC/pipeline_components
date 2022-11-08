@@ -76,7 +76,7 @@ def points_within_circle(x0, y0, radius, num_points=4):
     angle = numpy.linspace(0, 360, num_points)
     angle = numpy.deg2rad(angle)
 
-    if len(x0) and len(y0) > 1:
+    if (len(x0) > 1) and (len(y0) > 1):
         x_corners = []
         y_corners = []
         for (x_0, y_0) in zip(x0, y0):
@@ -96,7 +96,6 @@ def get_healpix_tiles(ra_deg, dec_deg):
         ra_deg * u.deg, dec_deg * u.deg, return_offsets=False
     )
     SB_index_unique = numpy.unique(SB_index)
-
     return SB_index_unique
 
 
@@ -255,6 +254,9 @@ def parse_args(argv):
 def main(argv):
     args = parse_args(argv)
     logging.info(args)
+
+    if not os.path.exists(args.output):
+        os.mkdir(args.output)
 
     # read config
     if not os.path.exists(args.json):

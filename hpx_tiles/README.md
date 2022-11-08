@@ -36,3 +36,7 @@ For every observation provide the footprint file from the POSSUM evaluation file
 Run the tiling with CASA on the image cubes.
 
 Assumed `naxis = 2048` unless otherwise provided as an argument. Should get this from the healpix configuration used to generate tile pixel maps.
+
+## Tile components
+
+Determine when a HPX tile is complete (all component observations are completed).
