@@ -92,8 +92,16 @@ def download_evaluation_files(sbid, project_code, username, password, output):
     logging.info(f'Downloading from: {t}')
     url_list = casda.stage_data(t)
     logging.info(f'Staging files {url_list}')
-    filelist = casda.download_files(url_list, savedir=output)
-    logging.info(f'Downloaded files {filelist}')
+    download_url_list = []
+    for url in url_list:
+        filename = url.split('?')[0].rsplit('/', 1)[1]
+        if not os.path.exists(os.path.join(output, filename)):
+            download_url_list.append(url)
+    if download_url_list:
+        filelist = casda.download_files(download_url_list, savedir=output)
+        logging.info(f'Downloading files {filelist}')
+    else:
+        logging.info('All files have already been downloaded')
 
 
 def main(argv):
