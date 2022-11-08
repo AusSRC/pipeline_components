@@ -66,6 +66,7 @@ def main(argv):
     logging.info(f'Completed observation ids: {observed_pixels}')
 
     # Determine which pixels can be completed
+    mosaic_files = []
     for idx, row in tiles_df.iterrows():
         hpx_pixel_id = row.values[0]
         ids = set([v for v in row.values[1:] if v is not None])
@@ -73,6 +74,9 @@ def main(argv):
             if (k == hpx_pixel_id) and (ids == set(v)):
                 logging.info(f'All observations required for HPX pixel {hpx_pixel_id} are completed.')
                 logging.info(f'Can mosaic files {pixels_to_files[k]}')
+                mosaic_files.append(pixels_to_files[k])
+
+    print(mosaic_files, end='')
 
 
 if __name__ == '__main__':
