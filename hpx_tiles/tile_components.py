@@ -76,7 +76,7 @@ def main(argv):
                 logging.info(f'Can mosaic files {pixels_to_files[k]}')
                 mosaic_files.append(pixels_to_files[k])
 
-    mosaic_files_print = [' '.join(f) for f in mosaic_files]
+    mosaic_files_print = [', '.join(f) for f in mosaic_files]
     print(mosaic_files_print, end='')
 
 
