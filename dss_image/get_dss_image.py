@@ -100,21 +100,6 @@ async def summary_plot(pool, detection, dry_run=False):
         )
     )
 
-    # Download DSS image from SkyView
-    hdu_opt = await loop.run_in_executor(None, partial(
-        SkyView.get_images,
-        position="{}d {}d".format(clon, clat),
-        survey="DSS",
-        coordinates="J2000",
-        projection="Tan",
-        width=width * u.deg,
-        height=height * u.deg,
-        cache=None,
-        show_progress=False
-    ))
-    hdu_opt = hdu_opt[0][0]
-    wcs_opt = WCS(hdu_opt.header)
-
     # Plot moment 0
     ax2 = plt.subplot(2, 2, 1, projection=wcs)
     ax2.imshow(mom0, origin="lower")
@@ -130,22 +115,40 @@ async def summary_plot(pool, detection, dry_run=False):
     ax2.add_patch(e)
 
     # Plot DSS image with HI contours
-    bmin, bmax = interval2.get_limits(hdu_opt.data)
-    ax = plt.subplot(2, 2, 2, projection=wcs_opt)
-    ax.imshow(hdu_opt.data, origin="lower")
-    ax.contour(
-        hdu_mom0.data,
-        transform=ax.get_transform(wcs),
-        levels=np.logspace(2.0, 5.0, 10),
-        colors="lightgrey",
-        alpha=1.0,
-    )
-    ax.grid(color="grey", ls="solid")
-    ax.set_xlabel("Right ascension (J2000)")
-    ax.set_ylabel("Declination (J2000)")
-    ax.tick_params(axis="x", which="both", left=False, right=False)
-    ax.tick_params(axis="y", which="both", top=False, bottom=False)
-    ax.set_title("DSS + moment 0")
+    # Download DSS image from SkyView
+    try:
+        hdu_opt = await loop.run_in_executor(None, partial(
+            SkyView.get_images,
+            position="{}d {}d".format(clon, clat),
+            survey="DSS",
+            coordinates="J2000",
+            projection="Tan",
+            width=width * u.deg,
+            height=height * u.deg,
+            cache=None,
+            show_progress=False
+        ))
+        hdu_opt = hdu_opt[0][0]
+        wcs_opt = WCS(hdu_opt.header)
+        bmin, bmax = interval2.get_limits(hdu_opt.data)
+        ax = plt.subplot(2, 2, 2, projection=wcs_opt)
+        ax.imshow(hdu_opt.data, origin="lower")
+        ax.contour(
+            hdu_mom0.data,
+            transform=ax.get_transform(wcs),
+            levels=np.logspace(2.0, 5.0, 10),
+            colors="lightgrey",
+            alpha=1.0,
+        )
+        ax.grid(color="grey", ls="solid")
+        ax.set_xlabel("Right ascension (J2000)")
+        ax.set_ylabel("Declination (J2000)")
+        ax.tick_params(axis="x", which="both", left=False, right=False)
+        ax.tick_params(axis="y", which="both", top=False, bottom=False)
+        ax.set_title("DSS + moment 0")
+    except Exception as e:
+        logging.error(f'Not able to download DSS image for {detection["name"]}')
+        logging.error(f'Raised error {e}')
 
     # Plot moment 1
     bmin, bmax = interval.get_limits(mom1)
@@ -215,6 +218,8 @@ async def main(argv):
         help="Database credentials",
         default="database.env",
     )
+    parser.add_argument('-i', dest='index', help='Starting index', default=0, type=int)
+    parser.add_argument('-n', dest='max', help='Max number of concurrent downloads', default=100, type=int)
     parser.add_argument(
         "-d",
         "--dry_run",
@@ -249,15 +254,16 @@ async def main(argv):
     # Iterate over detections
     task_list = []
     for i, d in enumerate(detections):
-        if i < 800:
+        if i < args.index:
             continue
         logging.info(f"{i + 1}/{len(detections)}")
         task = asyncio.create_task(summary_plot(pool, d, args.dry_run))
         task_list.append(task)
-        if i > 1000:
-            break
-
-    await asyncio.gather(*task_list)
+        if (i % args.max == 0) and (i != args.index):
+            await asyncio.gather(*task_list)
+            task_list = []
+        if (i == len(detections) - 1):
+            await asyncio.gather(*task_list)
 
     # Close
     await pool.close()
