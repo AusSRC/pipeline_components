@@ -1,0 +1,8 @@
+numpy
+matplotlib
+astropy
+spectral_cube
+aplpy
+pandas
+astroquery
+asyncio
