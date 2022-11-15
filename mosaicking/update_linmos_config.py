@@ -3,7 +3,6 @@
 import os
 import sys
 import argparse
-import configparser
 from jinja2 import Template
 
 
@@ -72,7 +71,7 @@ def main(argv):
         val = getattr(args, arg)
         if (arg != "config") and val is not None:
             passed_config[arg] = val
-    
+
     # Final configuration
     config_dict = {}
     tmp_dict = {**default_config, **passed_config}
