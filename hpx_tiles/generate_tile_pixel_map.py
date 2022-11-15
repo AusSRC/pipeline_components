@@ -385,7 +385,8 @@ def main(argv):
             writer.writerows(data)
         else:
             # delete
-            os.remove(csv_repeat_tiles)
+            if os.path.exists(csv_repeat_tiles):
+                os.remove(csv_repeat_tiles)
 
     if args.regions:
         logging.info('Writing DS9 region files')
