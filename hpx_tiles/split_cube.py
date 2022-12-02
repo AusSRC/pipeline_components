@@ -30,7 +30,7 @@ def main(argv):
 
     """
     args = parse_args(argv)
-    image = args['image']
+    image = args.image
     if not os.path.exists(image):
         raise Exception(f'Image cube {image} not found.')
     with fits.open(image, memmap=True) as hdu:
@@ -39,11 +39,11 @@ def main(argv):
 
     basename = os.path.basename(image)
 
-    output_dir = args['output']
+    output_dir = args.output
     if not os.path.exists(output_dir):
-        raise Exception(f'Output directory {output_dir} does not exist')
+        os.mkdir(output_dir)
 
-    n_split = args['n_split']
+    n_split = args.n_split
     logging.info(f'Breaking image {image} into {n_split} sub cubes by frequency.')
 
     n_freq = math.floor(n_channels / n_split)
