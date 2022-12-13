@@ -44,13 +44,12 @@ def main(argv):
         os.mkdir(output_dir)
 
     n_split = args.n_split
-    logging.info(f'Breaking image {image} into {n_split} sub cubes by frequency.')
-
     n_freq = math.floor(n_channels / n_split)
+    logging.info(f'Breaking image {image} into {n_split} sub cubes by frequency in {n_freq} channels.')
 
     for i in range(n_split):
         lower = n_freq * i
-        upper = n_freq * (i + 1)
+        upper = n_freq * (i + 1) - 1
         if (i + 1) == n_split:
             upper = n_channels - 1
 
