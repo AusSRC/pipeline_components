@@ -59,7 +59,7 @@ def main(argv):
         outimage = os.path.join(output_dir, filename.split('.fits')[0] + '.image')
         fitsimage = os.path.join(output_dir, filename)
         imsubimage(imagename=image, outfile=outimage, chans=f"{lower}~{upper}")
-        exportfits(imagename=outimage, fitsimage=fitsimage)
+        exportfits(imagename=outimage, fitsimage=fitsimage, overwrite=True)
         logging.info(f'[{i+1}/{n_split}] Split completed in {time.time() - start} seconds')
 
 
