@@ -34,7 +34,7 @@ class TestUpdateLinmosConfig(unittest.TestCase):
 
         with open(self.linmos_config, 'w') as f:
             f.writelines(DEFAULT_CONTENT)
-    
+
     def read_config_to_dict(self, filename):
         """Helper function to read linmos configuration into a dict
 

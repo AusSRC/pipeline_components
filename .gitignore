@@ -149,3 +149,5 @@ test.txt
 .DS_Store
 run.sh
 *tmp*
+*db.env
+*sofiax.ini
