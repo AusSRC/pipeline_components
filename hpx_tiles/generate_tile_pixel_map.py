@@ -229,15 +229,11 @@ def HPX_in_degrees(HPX, HPX_wcs):
     return crpix_ra, crpix_dec, hpx_ra, hpx_dec
 
 
-def get_footprint_id(filename):
-    """Get ID from footprint file name)"""
-    return filename.split("_")[-1].split(".")[0]
-
-
 def parse_args(argv):
     parser = argparse.ArgumentParser("Generate files defining Healpix tiles.")
     parser.add_argument('-f', dest='file', help='Footprint file', required=True)
     parser.add_argument('-o', dest='output', help='Output file prefix', required=True)
+    parser.add_argument('-i', dest='id', help='Observation ID for output file', required=True)
     parser.add_argument('-j', dest='json', help='The healpix tile configuration file [json].', required=True)
     parser.add_argument(
         '-r', dest='regions', action='store_true', help='Generate DS9 regions', default=False, required=False
@@ -288,7 +284,7 @@ def main(argv):
     hpx_pixels = []
     footprint_ids = []
 
-    footprint_id = get_footprint_id(footprint)
+    footprint_id = args.id
     extension = footprint.rsplit('.', 1)[1]
     if extension == "reg":
         footprint_region = pyregion.open(footprint)
