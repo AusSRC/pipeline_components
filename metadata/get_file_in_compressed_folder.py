@@ -6,6 +6,7 @@ import glob
 import tarfile
 import argparse
 import logging
+from pathlib import Path
 
 
 logging.basicConfig(level=logging.INFO)
@@ -55,7 +56,6 @@ def main(argv):
         raise Exception(f'Path to files {args.path} does not exist.')
     logging.info(f'Looking for files in path "{args.path}" with filename matching "{args.file}"')
 
-    match_file = None
     filename = None
 
     filelist = glob.glob(f'{args.path}/*{args.file}*')
@@ -71,15 +71,24 @@ def main(argv):
         with tarfile.open(tf) as tar:
             logging.info(tf)
             files = [ti.name for ti in tar.getmembers() if args.keyword in ti.name]
-            if files:
-                match_file = files[0]
-                filename = os.path.join(args.path, match_file)
+            dirs = list(set([Path(os.path.join(args.path, f)).parent.absolute() for f in files]))
+            for d in dirs:
+                logging.info(f'Looking in directory {d}')
+                # If directory already exists do not extract from compressed file
+                if not os.path.exists(d):
+                    logging.info(f'Extracting tar file at {tf}')
+                    tar.extractall(path=args.path)
 
-            # If file already exists do not extract from compressed file
-            if not os.path.exists(filename):
-                logging.info(f'Extracting tar file at {tf}')
-                tar.extractall(path=args.path)
-        if match_file:
+                # Find file that is not symlink
+                match_files = [f for f in glob.glob(str(d) + '/*') if args.keyword in f]
+                for f in match_files:
+                    if not os.path.islink(f):
+                        match_file = f
+                        filename = os.path.join(args.path, match_file)
+                        break
+                if filename:
+                    break
+        if filename:
             break
 
     if not match_file:
