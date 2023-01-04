@@ -31,6 +31,8 @@ def main(argv):
     data = None
     args = parse_args(argv)
     files = args.files
+    # NOTE: Order of files here determines how they are joined...
+    files.sort()
     logging.info(f"Joining fits files: {files}")
     for f in files:
         if not os.path.exists(f):
