@@ -77,7 +77,12 @@ def main(argv):
                 # If directory already exists do not extract from compressed file
                 if not os.path.exists(d):
                     logging.info(f'Extracting tar file at {tf}')
-                    tar.extractall(path=args.path)
+                    # Need to handle FileExistsError exceptions by looping over members
+                    for file_ in tar:
+                        try:
+                            tar.extract(file_)
+                        except Exception as e:
+                            logging.info(f'Tar extract exception: {e}')
 
                 # Find file that is not symlink
                 match_files = [f for f in glob.glob(str(d) + '/*') if args.keyword in f]
