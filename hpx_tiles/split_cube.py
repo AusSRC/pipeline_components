@@ -28,6 +28,8 @@ def main(argv):
     Usage:
         python split_cube.py -i <image_cube> -o <output_dir> -n <nsplit>
 
+    Returns comma separated filenames of split cubes.
+
     """
     args = parse_args(argv)
     image = args.image
@@ -47,6 +49,7 @@ def main(argv):
     n_freq = math.floor(n_channels / n_split)
     logging.info(f'Breaking image {image} into {n_split} sub cubes by frequency in {n_freq} channels.')
 
+    filenames = []
     for i in range(n_split):
         lower = n_freq * i
         upper = n_freq * (i + 1) - 1
@@ -60,7 +63,11 @@ def main(argv):
         fitsimage = os.path.join(output_dir, filename)
         imsubimage(imagename=image, outfile=outimage, chans=f"{lower}~{upper}", overwrite=True)
         exportfits(imagename=outimage, fitsimage=fitsimage, overwrite=True)
+        filenames.append(filename)
         logging.info(f'[{i+1}/{n_split}] Split completed in {time.time() - start} seconds')
+
+    filenames_str = ','.join(filenames)
+    print(filenames_str, end='')
 
 
 if __name__ == '__main__':
