@@ -1,3 +1,4 @@
-unittest
-configparser==5.0.2
-jinja2>=2.11.3
+pytest
+configparser
+jinja2
+python-dotenv
