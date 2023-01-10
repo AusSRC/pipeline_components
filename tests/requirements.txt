@@ -2,3 +2,4 @@ pytest
 configparser
 jinja2
 python-dotenv
+pytest-cov
