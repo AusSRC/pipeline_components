@@ -1,6 +1,16 @@
 name: Tests
 on: [push]
 jobs:
+  codecov:
+    steps:
+    - uses: actions/checkout@master
+    - uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage1.xml,./coverage2.xml # optional
+        flags: unittests # optional
+        name: codecov-umbrella # optional
+        fail_ci_if_error: true # optional (default = false)
+        verbose: true # optional (default = false)
   tests:
     runs-on: ubuntu-latest
     env:
@@ -22,6 +32,25 @@ jobs:
       - run: pip3 install -r download/requirements.txt
       - run: pip3 install -r mosaicking/requirements.txt
       - run: pip3 install -r source_finding/requirements.txt
-      # - run: python3 -m unittest tests/casda_download.py
       - run: python3 -m unittest tests/mosaicking.py
       - run: python3 -m unittest tests/source_finding.py
+  linting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.0'
+          architecture: 'x64'
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-build-${{ env.cache-name }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}
+      - run: pip3 install flake8
+      - run: flake8 download
+      - run: flake8 mosaicking
+      - run: flake8 source_finding
+      - run: flake8 tests
