@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import sys
-import io
 import unittest
 from mosaicking import update_linmos_config
 

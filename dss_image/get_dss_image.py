@@ -42,7 +42,6 @@ async def summary_plot(pool, detection, dry_run=False):
     # Plot figure size
     plt.rcParams['font.family'] = ['serif']
     plt.rcParams["figure.figsize"] = (8, 8)
-    fig = plt.figure()
     interval = PercentileInterval(95.0)
     interval2 = PercentileInterval(90.0)
 

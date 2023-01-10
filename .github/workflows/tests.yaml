@@ -1,17 +1,21 @@
 name: Tests
-on: [push]
+on: [push, pull_request]
 jobs:
   codecov:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
+    # TODO: cache dependencies
+    - name: Generate report
+      run: |
+        pip install pytest pytest-cov
+        pytest --cov-report xml --cov=tests/
     - uses: codecov/codecov-action@v3
       with:
-        files: ./coverage1.xml,./coverage2.xml # optional
-        flags: unittests # optional
-        name: codecov-umbrella # optional
-        fail_ci_if_error: true # optional (default = false)
-        verbose: true # optional (default = false)
+        files: ./coverage.xml,
+        name: codecov-umbrella
+        fail_ci_if_error: true
+        verbose: true
   tests:
     runs-on: ubuntu-latest
     env:
@@ -51,7 +55,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}
       - run: pip3 install flake8
-      - run: flake8 download
-      - run: flake8 mosaicking
-      - run: flake8 source_finding
-      - run: flake8 tests
+      - run: flake8 .

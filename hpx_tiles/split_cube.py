@@ -17,7 +17,9 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', dest='image', help='Image cube file', required=True)
     parser.add_argument('-o', dest='output', help='Output location for sub-cubes', required=True)
-    parser.add_argument('-n', dest='n_split', type=int, help='Number of splits to make (along frequency axis', required=True)
+    parser.add_argument(
+        '-n', dest='n_split', type=int, help='Number of splits to make (along frequency axis', required=True
+    )
     args = parser.parse_args(argv)
     return args
 
