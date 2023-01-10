@@ -13,9 +13,8 @@ jobs:
     - uses: codecov/codecov-action@v3
       with:
         files: ./coverage.xml,
-        name: codecov-umbrella
-        fail_ci_if_error: true
         verbose: true
+
   tests:
     runs-on: ubuntu-latest
     env:
@@ -34,12 +33,10 @@ jobs:
           key: ${{ runner.os }}-build-${{ env.cache-name }}
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}
-      - run: pip3 install -r download/requirements.txt
-      - run: pip3 install -r mosaicking/requirements.txt
-      - run: pip3 install -r source_finding/requirements.txt
-      - run: python3 -m unittest tests/mosaicking.py
-      - run: python3 -m unittest tests/source_finding.py
-  linting:
+      - run: pip3 install -r tests/requirements.txt
+      - run: pytest tests
+
+  linter:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
