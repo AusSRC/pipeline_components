@@ -2,6 +2,7 @@ name: Tests
 on: [push]
 jobs:
   codecov:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
     - uses: codecov/codecov-action@v3
