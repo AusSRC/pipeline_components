@@ -1,6 +1,6 @@
 name: Docker build latest
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   metadata:
