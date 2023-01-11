@@ -42,15 +42,13 @@ def parse_args(argv):
 
 
 def parse_default_config(filename):
-    """Read and parse default values from existing linmos configuration file.
-
-    """
+    """Read and parse default values from existing linmos configuration file."""
     config = {}
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         lines = f.readlines()
         for line in lines:
-            line = line.replace(' ', '').replace('\n', '')
-            kv_list = line.split('=')
+            line = line.replace(" ", "").replace("\n", "")
+            kv_list = line.split("=")
             if len(kv_list) != 2:
                 raise Exception("Default linmos config formatting error.")
             config[kv_list[0]] = kv_list[1]
@@ -77,18 +75,23 @@ def main(argv):
     tmp_dict = {**default_config, **passed_config}
     keys = tmp_dict.keys()
     for k in keys:
-        k_new = k.upper().replace('.', '_')
+        k_new = k.upper().replace(".", "_")
         value_new = tmp_dict[k]
         # remove .fits extension in filenames
-        if k == 'linmos.names' or k == 'linmos.weights' or k == 'linmos.outname' or k == 'linmos.outweight':
-            value_new = value_new.replace('.fits', '')
+        if (
+            k == "linmos.names"
+            or k == "linmos.weights"
+            or k == "linmos.outname"
+            or k == "linmos.outweight"
+        ):
+            value_new = value_new.replace(".fits", "")
         config_dict[k_new] = value_new
 
     # Read template and override linmos config
-    with open(LINMOS_CONFIG_TEMPLATE, 'r') as f:
+    with open(LINMOS_CONFIG_TEMPLATE, "r") as f:
         template = Template(f.read())
     config = template.render(config_dict)
-    with open(args.output, 'w') as f:
+    with open(args.output, "w") as f:
         f.writelines(config)
 
     return

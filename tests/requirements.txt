@@ -1,0 +1,14 @@
+pytest
+configparser
+jinja2
+python-dotenv
+pytest-cov
+asyncio
+asyncpg
+numpy
+pandas
+astropy
+astropy_healpix
+astroquery
+pyregion
+matplotlib

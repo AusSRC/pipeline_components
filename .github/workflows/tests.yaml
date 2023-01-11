@@ -1,27 +1,47 @@
 name: Tests
-on: [push]
+on: [push, pull_request]
+
 jobs:
+  codecov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Generate report
+        run: |
+          pip install -r tests/requirements.txt
+          pytest --cov-report xml --cov
+      - uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml,
+          verbose: true
+
   tests:
     runs-on: ubuntu-latest
     env:
       CASDA_USERNAME: ${{ secrets.CASDA_USERNAME }}
       CASDA_PASSWORD: ${{ secrets.CASDA_PASSWORD }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          python-version: '3.8.0'
-          architecture: 'x64'
-      - name: Cache pip
-        uses: actions/cache@v2
+          python-version: '3.9'
+          cache: 'pip'
+      - run: |
+          pip install -r tests/requirements.txt
+          pytest tests
+
+  linter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-build-${{ env.cache-name }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}
-      - run: pip3 install -r download/requirements.txt
-      - run: pip3 install -r mosaicking/requirements.txt
-      - run: pip3 install -r source_finding/requirements.txt
-      # - run: python3 -m unittest tests/casda_download.py
-      - run: python3 -m unittest tests/mosaicking.py
-      - run: python3 -m unittest tests/source_finding.py
+          python-version: '3.9'
+          cache: 'pip'
+      - run: |
+          pip install flake8
+          flake8 .

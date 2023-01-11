@@ -26,14 +26,28 @@ def parse_args(argv):
     parser = argparse.ArgumentParser("Generate tiles for a specfic SB.")
     parser.add_argument("-i", dest="obs_id", help="Observation ID.", required=True)
     parser.add_argument("-c", dest="cube", help="Image cube.", required=True)
-    parser.add_argument("-m", dest="map", help="Tiling map for the image cube [csv].", required=True)
-    parser.add_argument("-o", dest="output", help="Output write directory for tiles cubes.", required=True)
-    parser.add_argument("-t", dest="template", help="The template fits file.", required=True)
+    parser.add_argument(
+        "-m", dest="map", help="Tiling map for the image cube [csv].", required=True
+    )
+    parser.add_argument(
+        "-o",
+        dest="output",
+        help="Output write directory for tiles cubes.",
+        required=True,
+    )
+    parser.add_argument(
+        "-t", dest="template", help="The template fits file.", required=True
+    )
 
     # Optional
     parser.add_argument("-n", dest="naxis", type=int, required=False, default=2048)
     parser.add_argument(
-        "-p", dest="prefix", type=str, help='Prefix for output tile filenames', required=False, default='PoSSUM'
+        "-p",
+        dest="prefix",
+        type=str,
+        help="Prefix for output tile filenames",
+        required=False,
+        default="PoSSUM",
     )
     args = parser.parse_args(argv)
     return args
@@ -71,11 +85,15 @@ def main(argv):
     # Output directories
     prefix = args.prefix
     if not os.path.exists(args.output):
-        logging.info(f"Output directory not found. Creating new directory: {args.output}")
+        logging.info(
+            f"Output directory not found. Creating new directory: {args.output}"
+        )
         os.mkdir(args.output)
     write_dir = os.path.join(args.output, args.obs_id)
     if not os.path.exists(write_dir):
-        logging.info(f"Output subdirectory not found. Creating new directory: {write_dir}")
+        logging.info(
+            f"Output subdirectory not found. Creating new directory: {write_dir}"
+        )
         os.mkdir(write_dir)
 
     naxis = args.naxis
@@ -91,21 +109,17 @@ def main(argv):
             crpix1.append(float(row["CRPIX_RA"]))
             crpix2.append(float(row["CRPIX_DEC"]))
 
-    logging.info('Getting header')
+    logging.info("Getting header")
     fitsheader = imhead(image)
     axis = fitsheader["axisnames"]
     logging.info(axis)
 
     # Read tile template header
-    logging.info('Getting regridding template')
-    template_header = imregrid(
-        imagename=tile_template,
-        template="get",
-        overwrite=True
-    )
+    logging.info("Getting regridding template")
+    template_header = imregrid(imagename=tile_template, template="get", overwrite=True)
 
     # Starting the tiling.
-    logging.info('CASA tiling')
+    logging.info("CASA tiling")
     start_tiling = time.time()
     for i, (ra, dec) in enumerate(zip(crpix1, crpix2)):
         logging.info(f"Regridding tile {i+1}/{len(crpix1)}")
@@ -163,14 +177,14 @@ def main(argv):
             exportfits(
                 imagename=output_name,
                 fitsimage=output_name.split(".image")[0] + ".fits",
-                overwrite=True
+                overwrite=True,
             )
             # delete all casa image files.
             logging.info("Deleting the casa image. ")
             os.system("rm -rf %s" % output_name)
         except Exception as e:
-            logging.error(f'There was an exception: {e}')
-            logging.info('Skipping pixel')
+            logging.error(f"There was an exception: {e}")
+            logging.info("Skipping pixel")
             # TODO: need to update csv file
 
     end_tiling = time.time()
