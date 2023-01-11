@@ -68,11 +68,7 @@ def parse_args(argv):
         default="./casda.ini",
     )
     parser.add_argument(
-        '-d',
-        '--database',
-        type=str,
-        required=False,
-        help='Database access credentials'
+        "-d", "--database", type=str, required=False, help="Database access credentials"
     )
     parser.add_argument(
         "--dryrun",
@@ -118,8 +114,10 @@ async def main(argv):
     res = tap_query(args.project, args.sbid)
     logging.info(res)
 
-    if args.project == 'WALLABY' and not args.database:
-        raise Exception('WALLABY needs database credentials to write observation to database.')
+    if args.project == "WALLABY" and not args.database:
+        raise Exception(
+            "WALLABY needs database credentials to write observation to database."
+        )
 
     # stage
     parser = configparser.ConfigParser()
@@ -129,13 +127,15 @@ async def main(argv):
     logging.info(f"CASDA download staged data URLs: {url_list}")
 
     # get files
-    files = [str(f) for f in res['filename'].data.data]
-    image_cube_file = os.path.join(args.output, [f for f in files if 'image' in f][0])
-    weights_cube_file = os.path.join(args.output, [f for f in files if 'weights' in f][0])
+    files = [str(f) for f in res["filename"].data.data]
+    image_cube_file = os.path.join(args.output, [f for f in files if "image" in f][0])
+    weights_cube_file = os.path.join(
+        args.output, [f for f in files if "weights" in f][0]
+    )
 
     # add to observation table (WALLABY)
-    if args.project == 'WALLABY':
-        logging.info('Adding observation(s) to database')
+    if args.project == "WALLABY":
+        logging.info("Adding observation(s) to database")
         load_dotenv(args.database)
         creds = {
             "host": os.environ["DATABASE_HOST"],
@@ -146,33 +146,33 @@ async def main(argv):
         pool = await asyncpg.create_pool(**creds)
         async with pool.acquire() as conn:
             await conn.execute(
-                'INSERT INTO wallaby.observation \
+                "INSERT INTO wallaby.observation \
                     (sbid, ra, dec, image_cube_file, weights_cube_file) \
                 VALUES \
                     ($1, $2, $3, $4, $5) \
                 ON CONFLICT (sbid) \
                 DO UPDATE SET \
                     image_cube_file = $4, \
-                    weights_cube_file = $5;',
+                    weights_cube_file = $5;",
                 int(args.sbid),
-                float(res[0]['s_ra']),
-                float(res[0]['s_dec']),
+                float(res[0]["s_ra"]),
+                float(res[0]["s_dec"]),
                 image_cube_file,
-                weights_cube_file
+                weights_cube_file,
             )
             logging.info("Writing observation to WALLABY database.")
 
     # download if files do not exist
     if not os.path.exists(image_cube_file) or not os.path.exists(weights_cube_file):
         if not args.dryrun:
-            logging.info('Starting download')
-            logging.info(f'Writing image cube to {image_cube_file}')
-            logging.info(f'Writing weights cube to {weights_cube_file}')
+            logging.info("Starting download")
+            logging.info(f"Writing image cube to {image_cube_file}")
+            logging.info(f"Writing weights cube to {weights_cube_file}")
             casda.download_files(url_list, savedir=args.output)
         else:
-            logging.info('Dry run mode - not downloading any files')
+            logging.info("Dry run mode - not downloading any files")
     else:
-        logging.info('Files already exist, skipping download')
+        logging.info("Files already exist, skipping download")
 
 
 if __name__ == "__main__":

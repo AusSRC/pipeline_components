@@ -26,7 +26,7 @@ from astropy.visualization import PercentileInterval
 from astroquery.skyview import SkyView
 
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO)
 
 
@@ -40,7 +40,7 @@ async def summary_plot(pool, detection, dry_run=False):
         )
 
     # Plot figure size
-    plt.rcParams['font.family'] = ['serif']
+    plt.rcParams["font.family"] = ["serif"]
     plt.rcParams["figure.figsize"] = (8, 8)
     interval = PercentileInterval(95.0)
     interval2 = PercentileInterval(90.0)
@@ -66,13 +66,9 @@ async def summary_plot(pool, detection, dry_run=False):
     with io.BytesIO() as buf:
         buf.write(product["spec"])
         buf.seek(0)
-        spectrum = await loop.run_in_executor(None, partial(
-            np.loadtxt,
-            buf,
-            dtype="float",
-            comments="#",
-            unpack=True
-        ))
+        spectrum = await loop.run_in_executor(
+            None, partial(np.loadtxt, buf, dtype="float", comments="#", unpack=True)
+        )
 
     # Extract coordinate information
     nx = hdu_mom0.header["NAXIS1"]
@@ -102,23 +98,28 @@ async def summary_plot(pool, detection, dry_run=False):
     # Download DSS image from SkyView
     got_dss = False
     try:
-        hdu_opt = await loop.run_in_executor(None, partial(
-            SkyView.get_images,
-            position="{}d {}d".format(clon, clat),
-            survey="DSS",
-            coordinates="J2000",
-            projection="Tan",
-            width=width * u.deg,
-            height=height * u.deg,
-            cache=None,
-            show_progress=False
-        ))
+        hdu_opt = await loop.run_in_executor(
+            None,
+            partial(
+                SkyView.get_images,
+                position="{}d {}d".format(clon, clat),
+                survey="DSS",
+                coordinates="J2000",
+                projection="Tan",
+                width=width * u.deg,
+                height=height * u.deg,
+                cache=None,
+                show_progress=False,
+            ),
+        )
         hdu_opt = hdu_opt[0][0]
         wcs_opt = WCS(hdu_opt.header)
         got_dss = True
     except Exception as e:
-        logging.error(f'Not able to download DSS image for detection {detection["name"]}')
-        logging.error(f'Raised exception {e}')
+        logging.error(
+            f'Not able to download DSS image for detection {detection["name"]}'
+        )
+        logging.error(f"Raised exception {e}")
 
     # Plot moment 0
     ax2 = plt.subplot(2, 2, 1, projection=wcs)
@@ -188,7 +189,9 @@ async def summary_plot(pool, detection, dry_run=False):
     ax4.set_xlim([xmin, xmax])
     ax4.set_ylim([ymin, ymax])
     plt.suptitle(detection["name"].replace("_", " ").replace("-", "−"), fontsize=16)
-    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.3)
+    plt.subplots_adjust(
+        left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.3
+    )
 
     with io.BytesIO() as buf:
         plt.savefig(buf, format="png")
@@ -221,8 +224,14 @@ async def main(argv):
         help="Database credentials",
         default="database.env",
     )
-    parser.add_argument('-i', dest='index', help='Starting index', default=0, type=int)
-    parser.add_argument('-n', dest='max', help='Max number of concurrent downloads', default=100, type=int)
+    parser.add_argument("-i", dest="index", help="Starting index", default=0, type=int)
+    parser.add_argument(
+        "-n",
+        dest="max",
+        help="Max number of concurrent downloads",
+        default=100,
+        type=int,
+    )
     parser.add_argument(
         "-d",
         "--dry_run",
@@ -265,7 +274,7 @@ async def main(argv):
         if (i % args.max == 0) and (i != args.index):
             await asyncio.gather(*task_list)
             task_list = []
-        if (i == len(detections) - 1):
+        if i == len(detections) - 1:
             await asyncio.gather(*task_list)
 
     # Close

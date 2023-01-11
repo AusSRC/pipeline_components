@@ -15,10 +15,16 @@ logging.basicConfig(level=logging.INFO)
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', dest='image', help='Image cube file', required=True)
-    parser.add_argument('-o', dest='output', help='Output location for sub-cubes', required=True)
+    parser.add_argument("-i", dest="image", help="Image cube file", required=True)
     parser.add_argument(
-        '-n', dest='n_split', type=int, help='Number of splits to make (along frequency axis', required=True
+        "-o", dest="output", help="Output location for sub-cubes", required=True
+    )
+    parser.add_argument(
+        "-n",
+        dest="n_split",
+        type=int,
+        help="Number of splits to make (along frequency axis",
+        required=True,
     )
     args = parser.parse_args(argv)
     return args
@@ -36,10 +42,10 @@ def main(argv):
     args = parse_args(argv)
     image = args.image
     if not os.path.exists(image):
-        raise Exception(f'Image cube {image} not found.')
+        raise Exception(f"Image cube {image} not found.")
     with fits.open(image, memmap=True) as hdu:
         header = hdu[0].header
-        n_channels = header['NAXIS4']
+        n_channels = header["NAXIS4"]
 
     basename = os.path.basename(image)
 
@@ -49,7 +55,9 @@ def main(argv):
 
     n_split = args.n_split
     n_freq = math.floor(n_channels / n_split)
-    logging.info(f'Breaking image {image} into {n_split} sub cubes by frequency in {n_freq} channels.')
+    logging.info(
+        f"Breaking image {image} into {n_split} sub cubes by frequency in {n_freq} channels."
+    )
 
     filenames = []
     for i in range(n_split):
@@ -58,20 +66,24 @@ def main(argv):
         if (i + 1) == n_split:
             upper = n_channels - 1
 
-        logging.info(f'[{i+1}/{n_split}] Range {lower}-{upper}.')
+        logging.info(f"[{i+1}/{n_split}] Range {lower}-{upper}.")
         start = time.time()
-        filename = f'split_{lower}-{upper}_{basename}'
-        outimage = os.path.join(output_dir, filename.split('.fits')[0] + '.image')
+        filename = f"split_{lower}-{upper}_{basename}"
+        outimage = os.path.join(output_dir, filename.split(".fits")[0] + ".image")
         fitsimage = os.path.join(output_dir, filename)
-        imsubimage(imagename=image, outfile=outimage, chans=f"{lower}~{upper}", overwrite=True)
+        imsubimage(
+            imagename=image, outfile=outimage, chans=f"{lower}~{upper}", overwrite=True
+        )
         exportfits(imagename=outimage, fitsimage=fitsimage, overwrite=True)
         filenames.append(filename)
-        logging.info(f'[{i+1}/{n_split}] Split completed in {time.time() - start} seconds')
+        logging.info(
+            f"[{i+1}/{n_split}] Split completed in {time.time() - start} seconds"
+        )
 
-    filenames_str = ','.join(filenames)
-    print(filenames_str, end='')
+    filenames_str = ",".join(filenames)
+    print(filenames_str, end="")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     argv = sys.argv[1:]
     main(argv)

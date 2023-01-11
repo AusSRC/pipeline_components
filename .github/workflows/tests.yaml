@@ -13,7 +13,7 @@ jobs:
       - name: Generate report
         run: |
           pip install -r tests/requirements.txt
-          pytest --cov-report xml --cov=tests/
+          pytest --cov-report xml --cov
       - uses: codecov/codecov-action@v3
         with:
           files: ./coverage.xml,

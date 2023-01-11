@@ -231,17 +231,34 @@ def HPX_in_degrees(HPX, HPX_wcs):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser("Generate files defining Healpix tiles.")
-    parser.add_argument('-f', dest='file', help='Footprint file', required=True)
-    parser.add_argument('-o', dest='output', help='Output file prefix', required=True)
-    parser.add_argument('-i', dest='id', help='Observation ID for output file', required=True)
-    parser.add_argument('-j', dest='json', help='The healpix tile configuration file [json].', required=True)
+    parser.add_argument("-f", dest="file", help="Footprint file", required=True)
+    parser.add_argument("-o", dest="output", help="Output file prefix", required=True)
     parser.add_argument(
-        '-r', dest='regions', action='store_true', help='Generate DS9 regions', default=False, required=False
+        "-i", dest="id", help="Observation ID for output file", required=True
+    )
+    parser.add_argument(
+        "-j",
+        dest="json",
+        help="The healpix tile configuration file [json].",
+        required=True,
+    )
+    parser.add_argument(
+        "-r",
+        dest="regions",
+        action="store_true",
+        help="Generate DS9 regions",
+        default=False,
+        required=False,
     )
 
     # optional
     parser.add_argument(
-        "-p", dest="prefix", type=str, help='Prefix for output tile filenames', required=False, default='hpx_pixel_map'
+        "-p",
+        dest="prefix",
+        type=str,
+        help="Prefix for output tile filenames",
+        required=False,
+        default="hpx_pixel_map",
     )
     args = parser.parse_args(argv)
     return args
@@ -256,14 +273,14 @@ def main(argv):
 
     # read config
     if not os.path.exists(args.json):
-        raise Exception(f'Healpix tile configuration file not found at {args.json}')
-    with open(args.json, 'r') as f:
+        raise Exception(f"Healpix tile configuration file not found at {args.json}")
+    with open(args.json, "r") as f:
         tile_config = json.load(f)
 
     footprint = args.file
     if not os.path.exists(footprint):
-        raise Exception(f'Footprint file not found at {footprint}')
-    logging.info(f'Footprint file: {footprint}')
+        raise Exception(f"Footprint file not found at {footprint}")
+    logging.info(f"Footprint file: {footprint}")
 
     # healpix tile configuration and beam information
     nside = tile_config["nside"]
@@ -278,29 +295,27 @@ def main(argv):
     hp = HEALPix(nside=nside, order="ring", frame="icrs")
 
     logging.info("Number of pixels for nside %d is %d. " % (nside, hp.npix))
-    logging.info("HealPix pixel resolution for nside %d is %s." % (nside, hp.pixel_resolution))
+    logging.info(
+        "HealPix pixel resolution for nside %d is %s." % (nside, hp.pixel_resolution)
+    )
 
     hpx_id_pixels = {}
     hpx_pixels = []
     footprint_ids = []
 
     footprint_id = args.id
-    extension = footprint.rsplit('.', 1)[1]
+    extension = footprint.rsplit(".", 1)[1]
     if extension == "reg":
         footprint_region = pyregion.open(footprint)
         x_deg = [r.coord_list[0] for r in footprint_region]
         y_deg = [r.coord_list[1] for r in footprint_region]
     elif extension == "txt":
         footprint_region = pd.read_csv(footprint, header=None, sep=")")
-        x_deg = [
-            footprint_region[1][i].split(",")[0] for i in range(number_of_beams)
-        ]
-        y_deg = [
-            footprint_region[1][i].split(",")[1] for i in range(number_of_beams)
-        ]
+        x_deg = [footprint_region[1][i].split(",")[0] for i in range(number_of_beams)]
+        y_deg = [footprint_region[1][i].split(",")[1] for i in range(number_of_beams)]
         x_deg, y_deg = get_deg(x_deg, y_deg)
     else:
-        raise Exception(f'Unexpected extension for footprint file {footprint}')
+        raise Exception(f"Unexpected extension for footprint file {footprint}")
 
     beam_x_corner_sample, beam_y_corner_sample = points_within_circle(
         x_deg, y_deg, beam_radius, num_points=beam_sample_points
@@ -323,7 +338,7 @@ def main(argv):
     for i in range(len(footprint_ids)):
         csv_filename = "%s_%s.csv" % (args.prefix, footprint_id)
         csv_tile_output = os.path.join(args.output, csv_filename)
-        logging.info(f'Writing pixel map to {csv_tile_output}')
+        logging.info(f"Writing pixel map to {csv_tile_output}")
         with open(csv_tile_output, "w", newline="") as f:
             writer = csv.writer(f)
             data = [
@@ -385,13 +400,15 @@ def main(argv):
                 os.remove(csv_repeat_tiles)
 
     if args.regions:
-        logging.info('Writing DS9 region files')
+        logging.info("Writing DS9 region files")
         generate_DS9_polygons(
-            healpix_pixel=HPX_PIXELS, nside=nside, outname_prefix=os.path.join(args.output, args.prefix)
+            healpix_pixel=HPX_PIXELS,
+            nside=nside,
+            outname_prefix=os.path.join(args.output, args.prefix),
         )
 
-    print(footprint_id, end='')
+    print(footprint_id, end="")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv[1:])
