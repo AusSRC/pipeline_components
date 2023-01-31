@@ -30,12 +30,10 @@ def parse_args(argv):
 
 
 def name(fitsimage, prefix, cenfreq, tileID, version="v1"):
-
-    """
-    Setting up the name to be used for tiles. The script reads
-    the bmaj and stokes from the fits header. The rest of the parameters are 
+    """Setting up the name to be used for tiles. The script reads
+    the bmaj and stokes from the fits header. The rest of the parameters are
     flexible to change.
-    
+
     fitsimage: tile image
     prefix   : prefix to use. E.g. PSM for full survey,
                PSM_pilot1 for POSSUM pilot 1
@@ -43,10 +41,10 @@ def name(fitsimage, prefix, cenfreq, tileID, version="v1"):
     cenfreq  : Central frequency (for band 1 we set it to 944MHz,
                for band 2 1296MHz)
     tileID   : tile pixel (Healpix pixel)
-    
+
     version  : version of the output product. Version 1 is v1, version is v2,
                and so forth.
-    
+
     """
 
     logging.info(f"Reading {fitsimage} header")
@@ -79,7 +77,7 @@ def name(fitsimage, prefix, cenfreq, tileID, version="v1"):
     if int(stokes) == 4:
         stokesid = "v"
 
-    logging.info(f"Define healpix grid for nside 32")
+    logging.info("Define healpix grid for nside 32")
     # define the healpix grid
     hp = HEALPix(nside=32, order="ring", frame="icrs")
 
@@ -120,13 +118,13 @@ def name(fitsimage, prefix, cenfreq, tileID, version="v1"):
 
 def main(argv):
     """ Renames tile images.
-    
+
     Usage:
-        python renaming_tiles -i <image_name> -pf <output_prefix> -c <central_frequency> 
+        python renaming_tiles -i <image_name> -pf <output_prefix> -c <central_frequency>
         -id <tile_ID> -v <version number>
-        
+
     Returns a new name for a tile
-    
+
     """
 
     args = parse_args(argv)
