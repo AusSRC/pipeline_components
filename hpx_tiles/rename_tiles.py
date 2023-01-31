@@ -1,8 +1,32 @@
+#!/usr/bin/env python3
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy_healpix import HEALPix
 from astropy.io import fits
+import sys
+import argparse
+import logging
 
+
+logging.basicConfig(level=logging.INFO)
+
+
+
+
+def parse_args(argv):
+
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument("-i",  dest="fitsimage", help="Image file", required=True)
+    parser.add_argument("-pf", dest="prefix", help="Output prefix", required=True)
+    parser.add_argument("-c",  dest="cenfreq", help="Central frequency", required=True)
+    parser.add_argument("-id", dest="tileID", help="Tile ID ~ Healpix ID", required=True, type=int)
+    parser.add_argument("-v",  dest="version", help="Output version", required=True)
+    
+    args = parser.parse_args(argv)
+    
+    return args
 
 
 
@@ -26,7 +50,8 @@ def name(fitsimage, prefix, cenfreq, tileID, version='v1'):
     
     """
 
-    print('>>> Reading the header from the image %s'%fitsimage)
+    logging.info(f"Reading {fitsimage} header")
+
     hdr = fits.getheader(fitsimage)
     
     #get bmaj.
@@ -55,13 +80,15 @@ def name(fitsimage, prefix, cenfreq, tileID, version='v1'):
     if int(stokes) == 4:
         stokesid = 'v'
         
+    logging.info(f"Define healpix grid for nside 32")
     # define the healpix grid
     hp = HEALPix(nside=32, order='ring', frame='icrs')
 
     # extract the RA and DEC for a specific pixel 
     center = hp.healpix_to_lonlat(tileID) * u.deg
     RA, DEC = center.value
- 
+    
+    logging.info(f"Derived RA is {RA} degrees and DEC is {DEC} degrees")
     c = SkyCoord(ra=RA*u.degree, dec=DEC*u.degree, frame='icrs')
 
     h, hm, hs = c.ra.hms
@@ -73,13 +100,34 @@ def name(fitsimage, prefix, cenfreq, tileID, version='v1'):
     RADEC = '%s%s'%(hm, dm)
     
     outname = prefix +'_%s'%cenfreq+'_%.1f'%bmaj+'_%s'%(RADEC)+'_%s'%stokesid+'_%s'%version+'.fits'
+    print(outname, end='')
     
-    print('>>> The tile outname is %s'%outname)
+
+  
+def main(argv):
+
+    """ Renames tile images.
     
+    Usage:
+        python renaming_tiles -i <image_name> -prefix <output_prefix> -c <central_frequency> 
+        -id <tile_ID> -v <version number>
+        
+    Returns a new name for a tile
     
+    """
+
+    args = parse_args(argv)
+      
+    name(fitsimage=args.fitsimage, prefix=args.prefix, cenfreq=args.cenfreq,
+          tileID=args.tileID, version=args.version) 
+          
+     
     
+if __name__ == "__main__":
+    argv = sys.argv[1:]
+    main(argv)    
     
-name(fitsimage='EMU-2154-55-10978.fits', prefix='PSM', cenfreq='944MHz', tileID=10978, version='v1')  
+     
 
     
 
