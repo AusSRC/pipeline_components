@@ -55,13 +55,13 @@ def name(fitsimage, prefix, cenfreq, tileID, version="v1"):
     bmaj = hdr["BMAJ"] * 3600.0
 
     # extract stokes parameter. It can be in either the 3rd or fourth axis.
-    
+
     if hdr["CTYPE3"] == "STOKES":
         stokes = hdr["CRVAL3"]
 
     elif hdr["CTYPE4"] == "STOKES":
         stokes = hdr["CRVAL4"]
-    
+
     else:
         sys.exit(">>> Cannot find Stokes axis on the 3rd/4th axis")
 
