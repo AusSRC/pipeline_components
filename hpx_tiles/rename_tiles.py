@@ -55,12 +55,13 @@ def name(fitsimage, prefix, cenfreq, tileID, version="v1"):
     bmaj = hdr["BMAJ"] * 3600.0
 
     # extract stokes parameter. It can be in either the 3rd or fourth axis.
+    
     if hdr["CTYPE3"] == "STOKES":
         stokes = hdr["CRVAL3"]
 
-    if hdr["CTYPE4"] == "STOKES":
+    elif hdr["CTYPE4"] == "STOKES":
         stokes = hdr["CRVAL4"]
-
+    
     else:
         sys.exit(">>> Cannot find Stokes axis on the 3rd/4th axis")
 
@@ -68,13 +69,13 @@ def name(fitsimage, prefix, cenfreq, tileID, version="v1"):
     if int(stokes) == 1:
         stokesid = "i"
 
-    if int(stokes) == 2:
+    elif int(stokes) == 2:
         stokesid = "q"
 
-    if int(stokes) == 3:
+    elif int(stokes) == 3:
         stokesid = "u"
 
-    if int(stokes) == 4:
+    elif int(stokes) == 4:
         stokesid = "v"
 
     logging.info("Define healpix grid for nside 32")
@@ -109,6 +110,7 @@ def name(fitsimage, prefix, cenfreq, tileID, version="v1"):
         + "_%s" % cenfreq
         + "_%.1f" % bmaj
         + "_%s" % (RADEC)
+        + "_%s" % (tileID)
         + "_%s" % stokesid
         + "_%s" % version
         + ".fits"
