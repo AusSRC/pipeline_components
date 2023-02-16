@@ -3,7 +3,7 @@ WORKDIR /app
 
 # Install curl for download
 RUN apt-get update && \
-    apt-get install -y curl
+    apt-get install -y curl procps
 
 # Install requirements
 COPY requirements.txt .
