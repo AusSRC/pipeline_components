@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 from dotenv import load_dotenv
+import urllib
 import asyncpg
 import asyncio
 import argparse
@@ -11,6 +12,8 @@ import astropy
 import configparser
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
+import concurrent.futures
+
 
 
 logging.basicConfig()
@@ -105,6 +108,44 @@ def tap_query(project, sbid):
     return res
 
 
+def download_file(url, check_exists, output, timeout, buffer=131072):
+    # Large timeout is necessary as the file may need to be stage from tape
+    logging.info(f"Requesting output: {os.path.basename(output)} URL: {url} Timeout: {timeout}")
+
+    if url is None:
+        raise ValueError('URL is empty')
+
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        filename = r.info().get_filename()
+        http_size = int(r.info()['Content-Length'])
+        if check_exists:
+            try:
+                file_size = os.path.getsize(output)
+                if file_size == http_size:
+                    logging.info(f"File exists, ignoring: {os.path.basename(output)}")
+                    # File exists and is same size; do nothing
+                    return
+            except FileNotFoundError:
+                pass
+
+        filepath = f"{output}/{filename}"
+        logging.info(f"Downloading: {filepath} size: {http_size}")
+        count = 0
+        with open(f"{filepath}", 'wb') as o:
+            while http_size > count:
+                buff = r.read(buffer)
+                if not buff:
+                    break
+                o.write(buff)
+                count += len(buff)
+
+        download_size = os.path.getsize(filepath)
+        if http_size != download_size:
+            raise ValueError(f"File size does not match file {download_size} and http {http_size}")
+
+        logging.info(f"Download complete: {os.path.basename(filepath)}")
+        
+
 async def main(argv):
     """Downloads image cubes from CASDA matching the observing block IDs
     provided in the arguments.
@@ -114,10 +155,11 @@ async def main(argv):
     res = tap_query(args.project, args.sbid)
     logging.info(res)
 
-    if args.project == "WALLABY" and not args.database:
+    '''if args.project == "WALLABY" and not args.database:
         raise Exception(
             "WALLABY needs database credentials to write observation to database."
         )
+    '''
 
     # stage
     parser = configparser.ConfigParser()
@@ -133,8 +175,19 @@ async def main(argv):
         args.output, [f for f in files if "weights" in f][0]
     )
 
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = []
+        for url in url_list:
+            futures.append(
+                executor.submit(
+                    download_file, url=url, check_exists=True, output=args.output, timeout=3000
+                )
+            )
+        for future in concurrent.futures.as_completed(futures):
+            future.result()
+
     # add to observation table (WALLABY)
-    if args.project == "WALLABY":
+    '''if args.project == "WALLABY":
         logging.info("Adding observation(s) to database")
         load_dotenv(args.database)
         creds = {
@@ -173,7 +226,7 @@ async def main(argv):
             logging.info("Dry run mode - not downloading any files")
     else:
         logging.info("Files already exist, skipping download")
-
+    '''
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
