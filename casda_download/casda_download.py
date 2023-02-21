@@ -117,10 +117,11 @@ def download_file(url, check_exists, output, timeout, buffer=131072):
 
     with urllib.request.urlopen(url, timeout=timeout) as r:
         filename = r.info().get_filename()
+        filepath = f"{output}/{filename}"
         http_size = int(r.info()['Content-Length'])
         if check_exists:
             try:
-                file_size = os.path.getsize(output)
+                file_size = os.path.getsize(filepath)
                 if file_size == http_size:
                     logging.info(f"File exists, ignoring: {os.path.basename(output)}")
                     # File exists and is same size; do nothing
@@ -128,10 +129,9 @@ def download_file(url, check_exists, output, timeout, buffer=131072):
             except FileNotFoundError:
                 pass
 
-        filepath = f"{output}/{filename}"
         logging.info(f"Downloading: {filepath} size: {http_size}")
         count = 0
-        with open(f"{filepath}", 'wb') as o:
+        with open(filepath, 'wb') as o:
             while http_size > count:
                 buff = r.read(buffer)
                 if not buff:
