@@ -110,7 +110,7 @@ def tap_query(project, sbid):
 
 def download_file(url, check_exists, output, timeout, buffer=131072):
     # Large timeout is necessary as the file may need to be stage from tape
-    logging.info(f"Requesting output: {os.path.basename(output)} URL: {url} Timeout: {timeout}")
+    logging.info(f"Requesting: URL: {url} Timeout: {timeout}")
 
     if url is None:
         raise ValueError('URL is empty')
@@ -123,7 +123,7 @@ def download_file(url, check_exists, output, timeout, buffer=131072):
             try:
                 file_size = os.path.getsize(filepath)
                 if file_size == http_size:
-                    logging.info(f"File exists, ignoring: {os.path.basename(output)}")
+                    logging.info(f"File exists, ignoring: {os.path.basename(filepath)}")
                     # File exists and is same size; do nothing
                     return
             except FileNotFoundError:
