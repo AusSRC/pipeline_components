@@ -46,6 +46,11 @@ def main(argv):
     data = None
     args = parse_args(argv)
     files = args.files
+
+    path = os.path.dirname(args.output)
+    if not os.path.exists(path):
+        os.makedirs(path)
+
     # NOTE: Order of files here determines how they are joined...
     files.sort()
     logging.info(f"Joining fits files: {files}")
