@@ -48,8 +48,10 @@ def main(argv):
     files = args.files
 
     path = os.path.dirname(args.output)
-    if not os.path.exists(path):
+    try:
         os.makedirs(path)
+    except FileExistsError:
+        pass
 
     # NOTE: Order of files here determines how they are joined...
     files.sort()
