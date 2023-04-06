@@ -3,9 +3,9 @@
 import os
 import sys
 import logging
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 import urllib
-import asyncpg
+#import asyncpg
 import asyncio
 import argparse
 import astropy
@@ -13,7 +13,6 @@ import configparser
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
 import concurrent.futures
-
 
 
 logging.basicConfig()
@@ -144,7 +143,7 @@ def download_file(url, check_exists, output, timeout, buffer=131072):
             raise ValueError(f"File size does not match file {download_size} and http {http_size}")
 
         logging.info(f"Download complete: {os.path.basename(filepath)}")
-        
+
 
 async def main(argv):
     """Downloads image cubes from CASDA matching the observing block IDs
@@ -169,11 +168,11 @@ async def main(argv):
     logging.info(f"CASDA download staged data URLs: {url_list}")
 
     # get files
-    files = [str(f) for f in res["filename"].data.data]
-    image_cube_file = os.path.join(args.output, [f for f in files if "image" in f][0])
-    weights_cube_file = os.path.join(
-        args.output, [f for f in files if "weights" in f][0]
-    )
+    #files = [str(f) for f in res["filename"].data.data]
+    #image_cube_file = os.path.join(args.output, [f for f in files if "image" in f][0])
+    #weights_cube_file = os.path.join(
+    #    args.output, [f for f in files if "weights" in f][0]
+    #)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         futures = []

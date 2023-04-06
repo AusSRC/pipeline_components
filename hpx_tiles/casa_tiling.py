@@ -84,17 +84,24 @@ def main(argv):
 
     # Output directories
     prefix = args.prefix
-    if not os.path.exists(args.output):
+    #if not os.path.exists(args.output):
+    try:
         logging.info(
             f"Output directory not found. Creating new directory: {args.output}"
         )
         os.mkdir(args.output)
+    except FileExistsError:
+        pass
+
     write_dir = os.path.join(args.output, args.obs_id)
-    if not os.path.exists(write_dir):
+    #if not os.path.exists(write_dir):
+    try:
         logging.info(
             f"Output subdirectory not found. Creating new directory: {write_dir}"
         )
         os.mkdir(write_dir)
+    except FileExistsError:
+        pass
 
     naxis = args.naxis
 

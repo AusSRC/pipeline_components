@@ -268,8 +268,11 @@ def main(argv):
     args = parse_args(argv)
     logging.info(args)
 
-    if not os.path.exists(args.output):
+    #if not os.path.exists(args.output):
+    try:
         os.mkdir(args.output)
+    except FileExistsError:
+        pass
 
     # read config
     if not os.path.exists(args.json):

@@ -1,6 +1,5 @@
-astropy==5.1
-astroquery==0.4.6
-asyncpg==0.26.0
-asyncio==3.4.3
-python-dotenv==0.21.0
+astropy
+astroquery
+asyncpg
+python-dotenv
 packaging
