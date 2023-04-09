@@ -50,8 +50,10 @@ def main(argv):
     basename = os.path.basename(image)
 
     output_dir = args.output
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    try:
+        os.mkdirs(output_dir)
+    except FileExistsError:
+        pass
 
     n_split = args.n_split
     n_freq = math.floor(n_channels / n_split)
