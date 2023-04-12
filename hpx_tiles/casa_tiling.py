@@ -89,7 +89,7 @@ def main(argv):
         logging.info(
             f"Output directory not found. Creating new directory: {args.output}"
         )
-        os.mkdir(args.output)
+        os.makedirs(args.output)
     except FileExistsError:
         pass
 
@@ -99,7 +99,7 @@ def main(argv):
         logging.info(
             f"Output subdirectory not found. Creating new directory: {write_dir}"
         )
-        os.mkdir(write_dir)
+        os.makedirs(write_dir)
     except FileExistsError:
         pass
 
