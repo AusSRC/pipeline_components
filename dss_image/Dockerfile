@@ -7,5 +7,4 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy all files
-COPY . /app
-ENTRYPOINT ["python", "get_dss_image.py"]
+COPY *.py /app

@@ -1,0 +1,10 @@
+version: '3.5'
+
+services:
+  hpx_tiles:
+    platform: linux/amd64
+    image: aussrc/dss_image
+    container_name: dss_image
+    build:
+      context: .
+      dockerfile: Dockerfile
