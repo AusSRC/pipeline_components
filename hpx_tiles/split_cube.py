@@ -76,7 +76,7 @@ def main(argv):
         imsubimage(
             imagename=image, outfile=outimage, chans=f"{lower}~{upper}", overwrite=True
         )
-        exportfits(imagename=outimage, fitsimage=fitsimage, overwrite=True)
+        exportfits(imagename=outimage, fitsimage=fitsimage, overwrite=True, stokeslast=False)
         filenames.append(filename)
         logging.info(
             f"[{i+1}/{n_split}] Split completed in {time.time() - start} seconds"
