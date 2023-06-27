@@ -1,10 +1,10 @@
-FROM python:3.8-slim
+FROM python:3.10-slim
 WORKDIR /app
 
 # Install requirements
 RUN apt-get update && apt-get -y install procps
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy all files
 COPY . /app
