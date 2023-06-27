@@ -39,6 +39,10 @@ async def summary_plot(pool, detection, dry_run=False):
             "SELECT * FROM wallaby.product WHERE detection_id=$1", int(detection["id"])
         )
 
+    if product["mom0"] is None or product["mom1"] is None or product["spec"] is None:
+        logging.warn(f"mom0, mom1 or spec missing for detection {detection['id']}")
+        return
+
     # Plot figure size
     plt.rcParams["font.family"] = ["serif"]
     plt.rcParams["figure.figsize"] = (8, 8)
