@@ -3,6 +3,7 @@
 import os
 import sys
 import logging
+import json
 #from dotenv import load_dotenv
 import urllib
 #import asyncpg
@@ -31,10 +32,10 @@ WALLABY_QUERY = (
 POSSUM_QUERY = (
     "SELECT * FROM ivoa.obscore WHERE obs_id IN ('$SBIDS') AND "
     "dataproduct_type='cube' AND ("
-    "filename LIKE 'image.restored.i.%.contcube.fits' OR "
-    "filename LIKE 'weights.i.%.contcube.fits' OR "
-    "filename LIKE 'image.restored.q.%.contcube.fits' OR "
-    "filename LIKE 'image.restored.u.%.contcube.fits')"
+    "filename LIKE 'image.restored.i.%.contcube.conv.fits' OR "
+    "filename LIKE 'weights.q.%.contcube.fits' OR "
+    "filename LIKE 'image.restored.q.%.contcube.conv.fits' OR "
+    "filename LIKE 'image.restored.u.%.contcube.conv.fits')"
 )
 
 
@@ -68,6 +69,13 @@ def parse_args(argv):
         required=False,
         help="CASDA credentials config file.",
         default="./casda.ini",
+    )
+    parser.add_argument(
+        "-m",
+        "--manifest",
+        type=str,
+        required=False,
+        help="Manifest Output",
     )
     parser.add_argument(
         "-d", "--database", type=str, required=False, help="Database access credentials"
@@ -111,6 +119,11 @@ def download_file(url, check_exists, output, timeout, buffer=131072):
     # Large timeout is necessary as the file may need to be stage from tape
     logging.info(f"Requesting: URL: {url} Timeout: {timeout}")
 
+    try:
+        os.makedirs(output)
+    except:
+        pass
+
     if url is None:
         raise ValueError('URL is empty')
 
@@ -124,7 +137,7 @@ def download_file(url, check_exists, output, timeout, buffer=131072):
                 if file_size == http_size:
                     logging.info(f"File exists, ignoring: {os.path.basename(filepath)}")
                     # File exists and is same size; do nothing
-                    return
+                    return filepath
             except FileNotFoundError:
                 pass
 
@@ -143,6 +156,8 @@ def download_file(url, check_exists, output, timeout, buffer=131072):
             raise ValueError(f"File size does not match file {download_size} and http {http_size}")
 
         logging.info(f"Download complete: {os.path.basename(filepath)}")
+
+    return filepath
 
 
 async def main(argv):
@@ -174,16 +189,23 @@ async def main(argv):
     #    args.output, [f for f in files if "weights" in f][0]
     #)
 
+    file_list = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         futures = []
         for url in url_list:
+            if url.endswith('checksum'):
+                continue
             futures.append(
                 executor.submit(
                     download_file, url=url, check_exists=True, output=args.output, timeout=3000
                 )
             )
         for future in concurrent.futures.as_completed(futures):
-            future.result()
+            file_list.append(future.result())
+
+    if args.manifest:
+        with open(args.manifest, "w") as outfile:
+            outfile.write(json.dumps(file_list))
 
     # add to observation table (WALLABY)
     '''if args.project == "WALLABY":

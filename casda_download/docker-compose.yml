@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  casda_download:
+    platform: linux/amd64
+    image: casda_download
+    container_name: casda_download
+    build:
+      context: .
+      dockerfile: Dockerfile
