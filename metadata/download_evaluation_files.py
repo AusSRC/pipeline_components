@@ -56,9 +56,11 @@ def download_evaluation_files(sbid, project_code, username, password, output):
 
     """
     # ensure output exists or create
-    if not os.path.exists(output):
-        logging.info(f"Making output directory {output}")
-        os.mkdir(output)
+    try:
+        logging.info(f"Making output directory {os.path.abspath(output)}")
+        os.makedirs(os.path.abspath(output), exist_ok=True)
+    except Exception:
+        pass
 
     # get did
     url = f"{DID_URL}?projectCode={project_code}&sbid={sbid}"
