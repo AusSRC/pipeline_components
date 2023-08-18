@@ -185,6 +185,7 @@ def main(argv):
                 imagename=output_name,
                 fitsimage=output_name.split(".image")[0] + ".fits",
                 overwrite=True,
+                stokeslast=False
             )
             # delete all casa image files.
             logging.info("Deleting the casa image. ")
