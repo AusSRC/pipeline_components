@@ -51,66 +51,40 @@ def main(argv):
         3.  Search for file with the --keyword argument and print first match to stdout.
 
     """
+    filename = None
+
     args = parse_args(argv)
     if not os.path.exists(args.path):
         raise Exception(f"Path to files {args.path} does not exist.")
-    logging.info(
-        f'Looking for files in path "{args.path}" with filename matching "{args.file}"'
-    )
 
-    filename = None
+    logging.info(f'Looking for files in path "{args.path}" with filename matching "{args.file}"')
 
     filelist = glob.glob(f"{args.path}/*{args.file}*")
     if not filelist:
-        raise Exception(
-            f"No files found in {args.path} with compressed file matching {args.file}"
-        )
+        raise Exception(f"No files found in {args.path} with compressed file matching {args.file}")
 
     tarfiles = [f for f in filelist if (("checksum" not in f) and (".tar" in f))]
     if not tarfiles:
-        raise Exception(
-            f"No compressed files found in {args.path} with filename matching {args.file}"
-        )
+        raise Exception(f"No compressed files found in {args.path} with filename matching {args.file}")
 
     logging.info(f"Compressed files: {tarfiles}")
+
     for tf in tarfiles:
         with tarfile.open(tf) as tar:
             logging.info(tf)
-            files = [ti.name for ti in tar.getmembers() if args.keyword in ti.name]
-            dirs = list(
-                set([Path(os.path.join(args.path, f)).parent.absolute() for f in files])
-            )
-            for d in dirs:
-                logging.info(f"Looking in directory {d}")
-                # If directory already exists do not extract from compressed file
-                if not os.path.exists(d):
-                    logging.info(f"Extracting tar file at {tf}")
-                    # Need to handle FileExistsError exceptions by looping over members
-                    for file_ in tar:
-                        try:
-                            tar.extract(file_)
-                        except Exception as e:
-                            logging.info(f"Tar extract exception: {e}")
+            for member in tar.getmembers():
+                if args.keyword in member.name:
+                    tar.extract(member, args.path)
+                    full_path = f"{args.path}/{member.name}"
+                    if os.path.islink(full_path):
+                        continue
+                    else:
+                        filename = full_path
 
-                # Find file that is not symlink
-                match_files = [f for f in glob.glob(str(d) + "/*") if args.keyword in f]
-                for f in match_files:
-                    if not os.path.islink(f):
-                        match_file = f
-                        filename = os.path.join(args.path, match_file)
-                        break
-                if filename:
-                    break
-        if filename:
-            break
-
-    if not match_file:
-        raise Exception("No footprint files found in the evaluation files.")
     if not os.path.exists(filename):
         raise Exception(f"No file found {filename}")
-    print(filename, end="")
-    return
 
+    print(filename, end="")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
