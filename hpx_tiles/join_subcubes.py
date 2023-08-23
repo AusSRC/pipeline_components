@@ -14,26 +14,32 @@ logging.basicConfig(level=logging.INFO)
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-f", dest="files", nargs="+", help="Files to join in frequency.", required=True
-    )
+        "-f", dest="files", nargs="+", help="Files to join in frequency.", required=True)
+
     parser.add_argument(
         "-o",
         dest="output",
         help="Output filename and path for joined fits file",
-        required=True,
-    )
+        required=True,)
+
     parser.add_argument(
         "-a",
         dest="axis",
         type=int,
         help="Frequency axis index in split fits files",
-        default=1,
-    )
+        default=0,)
+
     parser.add_argument(
-        "--overwrite", dest="overwrite", action="store_true", default=False
-    )
+        "--overwrite", dest="overwrite", action="store_true", default=False)
+
     args = parser.parse_args(argv)
     return args
+
+
+# Assume filename is split_chan1-chan2_*
+def split_key(s):
+    a = s.split('_')[1].split('-')[0]
+    return int(a)
 
 
 def main(argv):
@@ -54,7 +60,7 @@ def main(argv):
         pass
 
     # NOTE: Order of files here determines how they are joined...
-    files.sort()
+    files.sort(key=split_key)
     logging.info(f"Joining fits files: {files}")
     for f in files:
         if not os.path.exists(f):
@@ -65,9 +71,7 @@ def main(argv):
         with fits.open(f) as hdul:
             if data is None:
                 header = hdul[0].header
-                logging.info(
-                    f"{header['CTYPE1']}, {header['CTYPE2']}, {header['CTYPE3']}, {header['CTYPE4']}"
-                )
+                logging.info(f"{header['CTYPE1']}, {header['CTYPE2']}, {header['CTYPE3']}, {header['CTYPE4']}")
                 data = hdul[0].data
             else:
                 data = np.concatenate((data, hdul[0].data), axis=args.axis)
