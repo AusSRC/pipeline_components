@@ -214,6 +214,11 @@ async def main(argv):
             file_list.append(future.result())
 
     if args.manifest:
+        try:
+            os.makedirs(os.path.dirname(args.manifest))
+        except:
+            pass
+
         with open(args.manifest, "w") as outfile:
             outfile.write(json.dumps(file_list))
 
