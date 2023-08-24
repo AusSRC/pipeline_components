@@ -37,6 +37,11 @@ POSSUM_QUERY = (
     "filename LIKE 'image.restored.q.%.contcube.conv.fits' OR "
     "filename LIKE 'image.restored.u.%.contcube.conv.fits')"
 )
+EMU_QUERY = (
+    "SELECT * FROM ivoa.obscore WHERE obs_id IN ('$SBIDS') AND ( "
+    "filename LIKE 'image.i.%.cont.taylor.%.restored.conv.fits' OR "
+    "filename LIKE 'weights.i.%.cont.taylor%.fits')"
+)
 
 
 def parse_args(argv):
@@ -102,6 +107,11 @@ def tap_query(project, sbid):
     elif project == "POSSUM":
         logging.info(f"Scheduling block ID: {sbid}")
         query = POSSUM_QUERY.replace("$SBIDS", str(sbid))
+        query = query.replace("$SURVEY", str(project))
+        logging.info(f"TAP Query: {query}")
+    elif project == "EMU":
+        logging.info(f"Scheduling block ID: {sbid}")
+        query = EMU_QUERY.replace("$SBIDS", str(sbid))
         query = query.replace("$SURVEY", str(project))
         logging.info(f"TAP Query: {query}")
     else:
