@@ -38,8 +38,8 @@ streamhdlr.setFormatter(formatter)
 logger.addHandler(streamhdlr)
 
 
-@retry(attempts=3, delay=1)
-async def summary_plot(pool, detection, dry_run=False):
+@retry(attempts=10, delay=5)
+async def summary_plot(pool, detection):
     loop = asyncio.get_running_loop()
 
     # Get product
@@ -56,7 +56,9 @@ async def summary_plot(pool, detection, dry_run=False):
         logging.warn(f"mom0, mom1 or spec missing for detection {detection['id']}")
         return
 
-    logging.info(f"Processing product id: {int(product['id'])}")
+    product_id = int(product['id'])
+
+    logging.info(f"Processing product id: {product_id}")
 
     # Plot figure size
     plt.rcParams["font.family"] = ["serif"]
@@ -106,7 +108,6 @@ async def summary_plot(pool, detection, dry_run=False):
                         * math.cos(np.deg2rad(tmp1 - tmp2))))
 
     # Download DSS image from SkyView
-    got_dss = False
     try:
         hdu_opt = await loop.run_in_executor(
             None,
@@ -121,11 +122,16 @@ async def summary_plot(pool, detection, dry_run=False):
                 cache=None,
                 show_progress=False,),)
 
-        hdu_opt = hdu_opt[0][0]
-        wcs_opt = WCS(hdu_opt.header)
-        got_dss = True
+        #if not hdu_opt:
+        #    logging.warn(f"No DSS image for product: {product_id}")
+        #    return
+
+        for h in hdu_opt:
+            hdu = h[0]
+            wcs_opt = WCS(hdu.header)
+            break
     except Exception as e:
-        logging.error(f'Download error of DSS image for product id: {int(product["id"])}, error: {e}')
+        logging.error(f'Download error of DSS image for product id: {product_id}, error: {e}')
         raise e
 
     # Plot moment 0
@@ -143,23 +149,22 @@ async def summary_plot(pool, detection, dry_run=False):
     ax2.add_patch(e)
 
     # Plot DSS image with HI contours
-    if got_dss:
-        bmin, bmax = interval2.get_limits(hdu_opt.data)
-        ax = plt.subplot(2, 2, 2, projection=wcs_opt)
-        ax.imshow(hdu_opt.data, origin="lower")
-        ax.contour(
-            hdu_mom0.data,
-            transform=ax.get_transform(wcs),
-            levels=np.logspace(2.0, 5.0, 10),
-            colors="lightgrey",
-            alpha=1.0,)
+    bmin, bmax = interval2.get_limits(hdu.data)
+    ax = plt.subplot(2, 2, 2, projection=wcs_opt)
+    ax.imshow(hdu.data, origin="lower")
+    ax.contour(
+        hdu_mom0.data,
+        transform=ax.get_transform(wcs),
+        levels=np.logspace(2.0, 5.0, 10),
+        colors="lightgrey",
+        alpha=1.0,)
 
-        ax.grid(color="grey", ls="solid")
-        ax.set_xlabel("Right ascension (J2000)")
-        ax.set_ylabel("Declination (J2000)")
-        ax.tick_params(axis="x", which="both", left=False, right=False)
-        ax.tick_params(axis="y", which="both", top=False, bottom=False)
-        ax.set_title("DSS + moment 0")
+    ax.grid(color="grey", ls="solid")
+    ax.set_xlabel("Right ascension (J2000)")
+    ax.set_ylabel("Declination (J2000)")
+    ax.tick_params(axis="x", which="both", left=False, right=False)
+    ax.tick_params(axis="y", which="both", top=False, bottom=False)
+    ax.set_title("DSS + moment 0")
 
     # Plot moment 1
     bmin, bmax = interval.get_limits(mom1)
@@ -203,13 +208,13 @@ async def summary_plot(pool, detection, dry_run=False):
         buf.seek(0)
         summary_plot = buf.read()
         plt.close()
-        if not dry_run:
-            async with pool.acquire() as conn:
-                await conn.execute("UPDATE wallaby.product SET plot=$1 WHERE id=$2",
-                                   summary_plot,
-                                   int(product["id"]),)
 
-            logging.info(f"Updated product id: {int(product['id'])}")
+    async with pool.acquire() as conn:
+        await conn.execute("UPDATE wallaby.product SET plot=$1 WHERE id=$2",
+                            summary_plot,
+                            product_id)
+
+    logging.info(f"Updated product id: {product_id}")
 
 
 async def main(argv):
@@ -272,7 +277,7 @@ async def main(argv):
         if not chunk:
             break
 
-        task_list = [asyncio.create_task(summary_plot(pool, c, args.dry_run)) for c in chunk]
+        task_list = [asyncio.create_task(summary_plot(pool, c)) for c in chunk]
         await asyncio.gather(*task_list)
 
     await pool.close()
