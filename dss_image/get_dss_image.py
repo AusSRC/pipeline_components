@@ -236,7 +236,7 @@ async def main(argv):
         "-n",
         dest="max",
         help="Max number of concurrent downloads",
-        default=100,
+        default=5,
         type=int,)
 
     parser.add_argument(
@@ -273,7 +273,7 @@ async def main(argv):
 
     it = iter(detections)
     while True:
-        chunk = list(islice(it, 10))
+        chunk = list(islice(it, args.max))
         if not chunk:
             break
 
