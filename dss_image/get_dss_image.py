@@ -236,16 +236,8 @@ async def main(argv):
         "-n",
         dest="max",
         help="Max number of concurrent downloads",
-        default=5,
+        default=10,
         type=int,)
-
-    parser.add_argument(
-        "-d",
-        "--dry_run",
-        dest="dry_run",
-        action="store_true",
-        help="Dry run mode",
-        default=False,)
 
     args = parser.parse_args(argv)
     load_dotenv(args.env)
@@ -271,6 +263,9 @@ async def main(argv):
 
         logging.info(f"Updating {len(detections)} detection product")
 
+    total = len(detections)
+    count = 0
+
     it = iter(detections)
     while True:
         chunk = list(islice(it, args.max))
@@ -279,6 +274,9 @@ async def main(argv):
 
         task_list = [asyncio.create_task(summary_plot(pool, c)) for c in chunk]
         await asyncio.gather(*task_list)
+
+        count += len(task_list)
+        logging.info(f"Processed {count} of {total} Run: {args.run}")
 
     await pool.close()
 
