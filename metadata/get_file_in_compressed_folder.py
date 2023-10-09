@@ -19,24 +19,29 @@ def parse_args(argv):
         "--path",
         type=str,
         required=True,
-        help="Path to directory containing evaluation files.",
-    )
+        help="Path to directory containing evaluation files.",)
     parser.add_argument(
         "-f",
         "--file",
         type=str,
-        required=False,
+        required=True,
         help="File (or keyword in file) for compressed metadata file",
-        default="calibration-metadata-processing-logs",
-    )
+        default="calibration-metadata-processing-logs",)
     parser.add_argument(
         "-k",
         "--keyword",
         type=str,
-        required=False,
+        required=True,
         help="Search key word for identifying file of interest",
-        default="metadata/footprintOutput",
-    )
+        default="metadata/footprintOutput",)
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Output directory",
+        default="metadata",)
+
     args = parser.parse_args(argv)
     return args
 
@@ -74,8 +79,9 @@ def main(argv):
             logging.info(tf)
             for member in tar.getmembers():
                 if args.keyword in member.name:
-                    tar.extract(member, args.path)
-                    full_path = f"{args.path}/{member.name}"
+                    member.name = os.path.basename(member.name)
+                    tar.extract(member, args.output)
+                    full_path = f"{args.output}/{member.name}"
                     if os.path.islink(full_path):
                         continue
                     else:
