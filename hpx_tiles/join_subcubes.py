@@ -38,7 +38,7 @@ def parse_args(argv):
 
 # Assume filename is split_chan1-chan2_*
 def split_key(s):
-    a = s.split('_')[1].split('-')[0]
+    a = s.split('split_')[1].split('-')[0]
     return int(a)
 
 
