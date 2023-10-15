@@ -78,9 +78,15 @@ def main(argv):
         with tarfile.open(tf) as tar:
             logging.info(tf)
             for member in tar.getmembers():
+                if member.isdir():
+                    continue
                 if args.keyword in member.name:
                     member.name = os.path.basename(member.name)
-                    tar.extract(member, args.output)
+                    try:
+                        tar.extract(member, args.output)
+                    except Exception as e:
+                        logging.warn(f"Error extracting: {member.name}")
+                        continue
                     full_path = f"{args.output}/{member.name}"
                     if os.path.islink(full_path):
                         continue
