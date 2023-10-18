@@ -27,17 +27,14 @@ def parse_args(argv):
     parser.add_argument("-i", dest="obs_id", help="Observation ID.", required=True)
     parser.add_argument("-c", dest="cube", help="Image cube.", required=True)
     parser.add_argument(
-        "-m", dest="map", help="Tiling map for the image cube [csv].", required=True
-    )
+        "-m", dest="map", help="Tiling map for the image cube [csv].", required=True)
     parser.add_argument(
         "-o",
         dest="output",
         help="Output write directory for tiles cubes.",
-        required=True,
-    )
+        required=True,)
     parser.add_argument(
-        "-t", dest="template", help="The template fits file.", required=True
-    )
+        "-t", dest="template", help="The template fits file.", required=True)
 
     # Optional
     parser.add_argument("-n", dest="naxis", type=int, required=False, default=2048)
@@ -47,8 +44,7 @@ def parse_args(argv):
         type=str,
         help="Prefix for output tile filenames",
         required=False,
-        default="PoSSUM",
-    )
+        default="PoSSUM",)
     args = parser.parse_args(argv)
     return args
 
@@ -86,19 +82,15 @@ def main(argv):
     prefix = args.prefix
     #if not os.path.exists(args.output):
     try:
-        logging.info(
-            f"Output directory not found. Creating new directory: {args.output}"
-        )
+        logging.info(f"Output directory not found. Creating new directory: {args.output}")
         os.makedirs(args.output)
     except FileExistsError:
         pass
 
-    write_dir = os.path.join(args.output, args.obs_id)
+    write_dir = args.output
     #if not os.path.exists(write_dir):
     try:
-        logging.info(
-            f"Output subdirectory not found. Creating new directory: {write_dir}"
-        )
+        logging.info(f"Output subdirectory not found. Creating new directory: {write_dir}")
         os.makedirs(write_dir)
     except FileExistsError:
         pass
@@ -141,23 +133,20 @@ def main(argv):
                 if fourth_axis == "Frequency":
                     number_of_frequency = fitsheader["shape"][3]
                     template_header["shap"] = np.array(
-                        [naxis, naxis, 1, number_of_frequency]
-                    )
+                        [naxis, naxis, 1, number_of_frequency])
 
                 third_axis = axis[2]
                 if third_axis == "Frequency":
                     number_of_frequency = fitsheader["shape"][2]
                     template_header["shap"] = np.array(
-                        [naxis, naxis, number_of_frequency, 1]
-                    )
+                        [naxis, naxis, number_of_frequency, 1])
 
             if len(axis) == 3:
                 third_axis = axis[2]
                 if third_axis == "Frequency":
                     number_of_frequency = fitsheader["shape"][2]
                     template_header["shap"] = np.array(
-                        [naxis, naxis, number_of_frequency]
-                    )
+                        [naxis, naxis, number_of_frequency])
                 else:
                     template_header["shap"] = np.array([naxis, naxis, 1])
 
@@ -171,22 +160,21 @@ def main(argv):
                 output=output_name,
                 axes=[0, 1],
                 interpolation="cubic",
-                overwrite=True,
-            )
+                overwrite=True,)
+
             # convert casa image to fits image
             one_tile_end = time.time()
             logging.info(
                 "Tiling of pixel ID %d completed. Time elapsed %.3f seconds. "
-                % (pixel_ID[i], (one_tile_end - one_tile_start))
-            )
+                % (pixel_ID[i], (one_tile_end - one_tile_start)))
 
             logging.info("Converting the casa image to fits image.")
             exportfits(
                 imagename=output_name,
                 fitsimage=output_name.split(".image")[0] + ".fits",
                 overwrite=True,
-                stokeslast=False
-            )
+                stokeslast=False)
+
             # delete all casa image files.
             logging.info("Deleting the casa image. ")
             os.system("rm -rf %s" % output_name)
@@ -198,8 +186,7 @@ def main(argv):
     end_tiling = time.time()
     logging.info(
         "Tiling for observation %s completed. Time elapsed is %.3f seconds."
-        % (args.obs_id, (end_tiling - start_tiling))
-    )
+        % (args.obs_id, (end_tiling - start_tiling)))
 
 
 if __name__ == "__main__":
