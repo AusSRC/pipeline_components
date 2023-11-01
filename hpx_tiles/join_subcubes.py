@@ -77,9 +77,8 @@ def main(argv):
                 data = np.concatenate((data, hdul[0].data), axis=args.axis)
             logging.info(f"Output data shape: {data.shape}")
 
-    hdu = fits.PrimaryHDU(header=header, data=data)
-    hdul = fits.HDUList([hdu])
-    hdul.writeto(args.output, overwrite=args.overwrite)
+    hdu = fits.CompImageHDU(header=header, data=data)
+    hdu.writeto(args.output, overwrite=args.overwrite)
 
 
 if __name__ == "__main__":

@@ -167,7 +167,7 @@ def download_file(url, check_exists, output, timeout, buffer=131072):
 
         logging.info(f"Download complete: {os.path.basename(filepath)}")
 
-    return filepath
+        return filepath
 
 
 async def main(argv):
