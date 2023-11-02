@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  casda_download:
+    platform: linux/amd64
+    image: aussrc/metadata_tools
+    container_name: metadata_tools
+    build:
+      context: .
+      dockerfile: Dockerfile
