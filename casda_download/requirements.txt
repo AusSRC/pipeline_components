@@ -3,3 +3,4 @@ astroquery
 asyncpg
 python-dotenv
 packaging
+pyvo
