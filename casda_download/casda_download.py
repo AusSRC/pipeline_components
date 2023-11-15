@@ -4,9 +4,7 @@ import os
 import sys
 import logging
 import json
-#from dotenv import load_dotenv
 import urllib
-#import asyncpg
 import asyncio
 import argparse
 import astropy
@@ -16,8 +14,10 @@ from astroquery.casda import Casda
 import concurrent.futures
 
 
-logging.basicConfig()
-logging.getLogger().setLevel(logging.INFO)
+logging.basicConfig(stream=sys.stdout,
+                    level=logging.INFO,
+                    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
+
 astropy.utils.iers.conf.auto_download = False
 
 
@@ -121,7 +121,7 @@ def tap_query(project, sbid):
     return res
 
 
-def download_file(url, check_exists, output, timeout, buffer=1048576):
+def download_file(url, check_exists, output, timeout, buffer=4194304):
     # Large timeout is necessary as the file may need to be stage from tape
     logging.info(f"Requesting: URL: {url} Timeout: {timeout}")
 
