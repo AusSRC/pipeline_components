@@ -121,7 +121,7 @@ def tap_query(project, sbid):
     return res
 
 
-def download_file(url, check_exists, output, timeout, buffer=131072):
+def download_file(url, check_exists, output, timeout, buffer=1048576):
     # Large timeout is necessary as the file may need to be stage from tape
     logging.info(f"Requesting: URL: {url} Timeout: {timeout}")
 
