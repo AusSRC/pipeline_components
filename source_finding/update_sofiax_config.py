@@ -76,6 +76,8 @@ def main(argv):
         if (arg not in file_args) and val is not None:
             config.set("SoFiAX", arg, val)
 
+    os.umask(0)
+
     # write
     with open(args.output, "w", opener=opener) as f:
         config.write(f)
