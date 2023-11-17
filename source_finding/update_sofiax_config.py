@@ -44,6 +44,10 @@ def parse_args(argv):
     args = parser.parse_args(argv)
     return args
 
+# Owner only
+def opener(path, flags):
+    return os.open(path, flags, 0o600)
+
 
 def main(argv):
     """Update the SoFiAX configuration file with arguments"""
@@ -73,7 +77,7 @@ def main(argv):
             config.set("SoFiAX", arg, val)
 
     # write
-    with open(args.output, "w") as f:
+    with open(args.output, "w", opener=opener) as f:
         config.write(f)
 
 
