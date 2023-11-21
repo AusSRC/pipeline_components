@@ -9,11 +9,6 @@ import logging
 from pathlib import Path
 
 
-logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO,
-                    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
-
-
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -64,8 +59,6 @@ def main(argv):
     if not os.path.exists(args.path):
         raise Exception(f"Path to files {args.path} does not exist.")
 
-    logging.info(f'Looking for files in path "{args.path}" with filename matching "{args.file}"')
-
     filelist = glob.glob(f"{args.path}/*{args.file}*")
     if not filelist:
         # scan the input directory for the existing file
@@ -84,11 +77,8 @@ def main(argv):
     if not tarfiles:
         raise Exception(f"No compressed files found in {args.path} with filename matching {args.file}")
 
-    logging.info(f"Compressed files: {tarfiles}")
-
     for tf in tarfiles:
         with tarfile.open(tf) as tar:
-            logging.info(tf)
             for member in tar.getmembers():
                 if member.isdir():
                     continue
@@ -97,7 +87,6 @@ def main(argv):
                     try:
                         tar.extract(member, args.output)
                     except Exception as e:
-                        logging.warn(f"Error extracting: {member.name}")
                         continue
                     full_path = f"{args.output}/{member.name}"
                     if os.path.islink(full_path):
