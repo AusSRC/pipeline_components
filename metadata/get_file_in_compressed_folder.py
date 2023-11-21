@@ -9,7 +9,9 @@ import logging
 from pathlib import Path
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(stream=sys.stdout,
+                    level=logging.INFO,
+                    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
 
 
 def parse_args(argv):
@@ -66,7 +68,17 @@ def main(argv):
 
     filelist = glob.glob(f"{args.path}/*{args.file}*")
     if not filelist:
-        raise Exception(f"No files found in {args.path} with compressed file matching {args.file}")
+        # scan the input directory for the existing file
+        keyfile = None
+        for f in glob.glob(f"{args.path}/**/{os.path.basename(args.keyword)}*", recursive=True):
+            if os.path.islink(f):
+                continue
+            else:
+                print(f)
+                return
+
+        if keyfile is None:
+            raise Exception(f"No files found in {args.path} with compressed file matching {args.file}")
 
     tarfiles = [f for f in filelist if (("checksum" not in f) and (".tar" in f))]
     if not tarfiles:
