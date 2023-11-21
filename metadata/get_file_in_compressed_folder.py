@@ -74,7 +74,7 @@ def main(argv):
             if os.path.islink(f):
                 continue
             else:
-                print(f)
+                print(f, end="")
                 return
 
         if keyfile is None:
