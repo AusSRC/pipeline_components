@@ -45,7 +45,8 @@ async def summary_plot(pool, detection):
     # Get product
     async with pool.acquire() as conn:
         product = await conn.fetchrow(
-            "SELECT * FROM wallaby.product WHERE detection_id=$1 AND plot IS NULL", 
+            "SELECT * FROM wallaby.product WHERE detection_id=$1",
+            #"SELECT * FROM wallaby.product WHERE detection_id=$1 AND plot IS NULL", 
             int(detection["id"]))
 
     if not product:
@@ -63,8 +64,6 @@ async def summary_plot(pool, detection):
     # Plot figure size
     plt.rcParams["font.family"] = ["serif"]
     plt.rcParams["figure.figsize"] = (8, 8)
-    interval = PercentileInterval(95.0)
-    interval2 = PercentileInterval(90.0)
 
     # Open moment 0 image
     with io.BytesIO() as buf:
@@ -149,9 +148,10 @@ async def summary_plot(pool, detection):
     ax2.add_patch(e)
 
     # Plot DSS image with HI contours
-    bmin, bmax = interval2.get_limits(hdu.data)
+    interval = PercentileInterval(99.0)
+    bmin, bmax = interval.get_limits(hdu.data)
     ax = plt.subplot(2, 2, 2, projection=wcs_opt)
-    ax.imshow(hdu.data, origin="lower")
+    ax.imshow(hdu.data, origin="lower", vmin=bmin, vmax=bmax)
     ax.contour(
         hdu_mom0.data,
         transform=ax.get_transform(wcs),
@@ -165,8 +165,10 @@ async def summary_plot(pool, detection):
     ax.tick_params(axis="x", which="both", left=False, right=False)
     ax.tick_params(axis="y", which="both", top=False, bottom=False)
     ax.set_title("DSS + moment 0")
+    ax.set_aspect('equal')
 
     # Plot moment 1
+    interval = PercentileInterval(95.0)
     bmin, bmax = interval.get_limits(mom1)
     ax3 = plt.subplot(2, 2, 3, projection=wcs)
     ax3.imshow(
@@ -200,6 +202,8 @@ async def summary_plot(pool, detection):
     ax4.grid(True)
     ax4.set_xlim([xmin, xmax])
     ax4.set_ylim([ymin, ymax])
+    ax4.set_aspect('auto')
+
     plt.suptitle(detection["name"].replace("_", " ").replace("-", "−"), fontsize=16)
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.3)
 

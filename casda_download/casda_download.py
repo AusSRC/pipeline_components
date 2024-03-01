@@ -49,7 +49,7 @@ def parse_args(argv):
     parser.add_argument(
         "-s",
         "--sbid",
-        type=int,
+        type=str,
         required=True,
         action='append',
         nargs='+',
@@ -92,7 +92,7 @@ def parse_args(argv):
 def tap_query(project, sbid):
     """Return astropy table with query result (files to download)"""
 
-    ids = [f"'ASKAP-{str(i)}'" for i in sbid[0]]
+    ids = [f"'{str(i)}'" for i in sbid[0]]
 
     if project == "WALLABY":
         logging.info(f"Scheduling block ID: {sbid}")
