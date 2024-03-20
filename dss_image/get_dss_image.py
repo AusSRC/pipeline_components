@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Add summary figure to 'plot' column for WALLABY.
+Add summary figure to 'plot' column for
 """
 
 import io
@@ -45,8 +45,8 @@ async def summary_plot(pool, detection):
     # Get product
     async with pool.acquire() as conn:
         product = await conn.fetchrow(
-            "SELECT * FROM wallaby.product WHERE detection_id=$1",
-            #"SELECT * FROM wallaby.product WHERE detection_id=$1 AND plot IS NULL", 
+            "SELECT * FROM product WHERE detection_id=$1",
+            #"SELECT * FROM product WHERE detection_id=$1 AND plot IS NULL",
             int(detection["id"]))
 
     if not product:
@@ -214,7 +214,7 @@ async def summary_plot(pool, detection):
         plt.close()
 
     async with pool.acquire() as conn:
-        await conn.execute("UPDATE wallaby.product SET plot=$1 WHERE id=$2",
+        await conn.execute("UPDATE product SET plot=$1 WHERE id=$2",
                             summary_plot,
                             product_id)
 
@@ -252,18 +252,19 @@ async def main(argv):
         "database": os.environ["DATABASE_NAME"],
         "user": os.environ["DATABASE_USER"],
         "password": os.environ["DATABASE_PASSWORD"],}
+    schema = os.environ["DATABASE_SCHEMA"]
 
     # Fetch runs and detections
-    pool = await asyncpg.create_pool(**creds)
+    pool = await asyncpg.create_pool(**creds, server_settings={'search_path': schema})
     async with pool.acquire() as conn:
-        run = await conn.fetchrow("SELECT * FROM wallaby.run WHERE name=$1", args.run)
+        run = await conn.fetchrow("SELECT * FROM run WHERE name=$1", args.run)
         if run is None:
             raise Exception(f"Run with name {args.run} could not be found")
 
         logging.info(f"Adding DSS images to detection product in run {args.run}")
 
         detections = await conn.fetch(
-            "SELECT * FROM wallaby.detection WHERE run_id=$1 ORDER BY id ASC", int(run["id"]))
+            "SELECT * FROM detection WHERE run_id=$1 ORDER BY id ASC", int(run["id"]))
 
         logging.info(f"Updating {len(detections)} detection product")
 
