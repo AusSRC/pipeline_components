@@ -26,7 +26,7 @@ EVAL_URL = "https://data.csiro.au/casda_vo_proxy/vo/datalink/links?ID="
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-s", "--sbid", type=int, required=True, help="SBID for observation")
+        "-s", "--sbid", type=str, required=True, help="SBID for observation")
     parser.add_argument(
         "-p", "--project_code", type=str, required=True, help="Project code")
     parser.add_argument(
