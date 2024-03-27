@@ -13,6 +13,7 @@ import asyncpg
 import argparse
 import logging
 import warnings
+from operator import sub
 from dotenv import load_dotenv
 from functools import partial
 from itertools import islice
@@ -36,6 +37,13 @@ streamhdlr = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 streamhdlr.setFormatter(formatter)
 logger.addHandler(streamhdlr)
+
+
+def get_aspect(ax):
+    fw, fh = ax.get_figure().get_size_inches()
+    _, _, w, h = ax.get_position().bounds
+    disp_ratio = round((fh * h) / (fw * w), 2)
+    return disp_ratio
 
 
 @retry(attempts=10, delay=5)
@@ -119,7 +127,8 @@ async def summary_plot(pool, detection):
                 width=width * u.deg,
                 height=height * u.deg,
                 cache=None,
-                show_progress=False,),)
+                show_progress=False,)
+            )
 
         #if not hdu_opt:
         #    logging.warn(f"No DSS image for product: {product_id}")
@@ -142,6 +151,7 @@ async def summary_plot(pool, detection):
     ax2.tick_params(axis="x", which="both", left=False, right=False)
     ax2.tick_params(axis="y", which="both", top=False, bottom=False)
     ax2.set_title("moment 0")
+    ar = get_aspect(ax2)
 
     # Add beam size
     e = Ellipse((5, 5), width=5, height=5, angle=0, edgecolor="peru", facecolor="peru")
@@ -151,21 +161,20 @@ async def summary_plot(pool, detection):
     interval = PercentileInterval(99.0)
     bmin, bmax = interval.get_limits(hdu.data)
     ax = plt.subplot(2, 2, 2, projection=wcs_opt)
-    ax.imshow(hdu.data, origin="lower", vmin=bmin, vmax=bmax)
+    ax.imshow(hdu.data, origin="lower", vmin=bmin, vmax=bmax, aspect=str(ar))
     ax.contour(
         hdu_mom0.data,
         transform=ax.get_transform(wcs),
         levels=np.logspace(2.0, 5.0, 10),
         colors="lightgrey",
-        alpha=1.0,)
-
+        alpha=1.0,
+    )
     ax.grid(color="grey", ls="solid")
     ax.set_xlabel("Right ascension (J2000)")
     ax.set_ylabel("Declination (J2000)")
     ax.tick_params(axis="x", which="both", left=False, right=False)
     ax.tick_params(axis="y", which="both", top=False, bottom=False)
     ax.set_title("DSS + moment 0")
-    ax.set_aspect('equal')
 
     # Plot moment 1
     interval = PercentileInterval(95.0)
