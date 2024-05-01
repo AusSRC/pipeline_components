@@ -1,0 +1,4 @@
+asyncio
+asyncpg
+matplotlib
+python-dotenv
