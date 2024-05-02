@@ -29,6 +29,12 @@ WALLABY_QUERY = (
     "filename LIKE 'weights.i.%.cube.fits' OR "
     "filename LIKE 'image.restored.i.%.cube.contsub.fits')")
 
+WALLABY_MILKYWAY_QUERY = (
+    "SELECT * FROM ivoa.obscore WHERE obs_id IN ('ASKAP-33596') "
+    "AND dataproduct_type='cube' AND "
+    "(filename LIKE 'weights.i.%.cube.MilkyWay.fits' OR filename LIKE 'image.restored.i.%.cube.MilkyWay.contsub.fits')"
+)
+
 POSSUM_QUERY = (
     "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND "
     "dataproduct_type='cube' AND ("
@@ -105,6 +111,12 @@ def tap_query(project, sbid):
         query = query.replace("$SURVEY", str(project))
         logging.info(f"TAP Query: {query}")
 
+    if project == "WALLABY_MILKYWAY":
+        logging.info(f"Scheduling block ID: {sbid}")
+        query = WALLABY_MILKYWAY_QUERY.replace("$SBIDS", ",".join(ids))
+        query = query.replace("$SURVEY", str(project))
+        logging.info(f"TAP Query: {query}")
+
     elif project == "POSSUM":
         logging.info(f"Scheduling block ID: {sbid}")
         query = POSSUM_QUERY.replace("$SBIDS", ",".join(ids))
@@ -123,7 +135,7 @@ def tap_query(project, sbid):
         query = query.replace("$SURVEY", str(project))
         logging.info(f"TAP Query: {query}")
     else:
-        raise Exception('Unexpected project name provided ("WALLABY" or "POSSUM" currently supported).')
+        raise Exception('Unexpected project name provided.')
 
     casdatap = TapPlus(url=URL, verbose=False)
     job = casdatap.launch_job_async(query)
