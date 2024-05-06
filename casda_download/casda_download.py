@@ -30,7 +30,7 @@ WALLABY_QUERY = (
     "filename LIKE 'image.restored.i.%.cube.contsub.fits')")
 
 WALLABY_MILKYWAY_QUERY = (
-    "SELECT * FROM ivoa.obscore WHERE obs_id IN ('ASKAP-33596') "
+    "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) "
     "AND dataproduct_type='cube' AND "
     "(filename LIKE 'weights.i.%.cube.MilkyWay.fits' OR filename LIKE 'image.restored.i.%.cube.MilkyWay.contsub.fits')"
 )
