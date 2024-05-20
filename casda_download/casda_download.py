@@ -111,7 +111,7 @@ def tap_query(project, sbid):
         query = query.replace("$SURVEY", str(project))
         logging.info(f"TAP Query: {query}")
 
-    if project == "WALLABY_MILKYWAY":
+    elif project == "WALLABY_MILKYWAY":
         logging.info(f"Scheduling block ID: {sbid}")
         query = WALLABY_MILKYWAY_QUERY.replace("$SBIDS", ",".join(ids))
         query = query.replace("$SURVEY", str(project))
