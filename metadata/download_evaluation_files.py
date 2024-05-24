@@ -59,6 +59,7 @@ def download_evaluation_files(sbid, project_code, username, password, output):
         pass
 
     # get did
+    sbid = sbid.replace('ASKAP-', '')
     url = f"{DID_URL}?projectCode={project_code}&sbid={sbid}"
     logging.info(f"Request to {url}")
     res = requests.get(url)
