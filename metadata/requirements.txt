@@ -1,6 +1,6 @@
 requests
 astropy
-astroquery
+astroquery==0.4.6
 asyncio
 asyncpg
 packaging

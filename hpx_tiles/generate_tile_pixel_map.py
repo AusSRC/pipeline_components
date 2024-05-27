@@ -107,6 +107,7 @@ def generate_DS9_polygons(healpix_pixel, nside, outname_prefix):
 
     regions = []
     centers = []
+    texts = []
     for pixel in healpix_pixel:
 
         corner = hp.boundaries_lonlat(pixel, step=1) * u.deg
@@ -130,30 +131,42 @@ def generate_DS9_polygons(healpix_pixel, nside, outname_prefix):
 
         circle_string = "circle(%f, %f, %f)" % (center_RA, center_DEC, 0.1)
         centers.append(circle_string)
+
+        text_string = f'text {center_RA} {center_DEC} {{{pixel}}}'
+        texts.append(text_string)
+
     first_line = "#Region file format: DS9 version 4.1 \n"
     second_line = 'global color=black dashlist=8 3 width=2 font="helvetica 10 normal roman" \
     select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n'
     third_line = "fk5 \n"
-
     SB = outname_prefix
-    region_file = open("%s-boundary-%d.reg" % (SB, nside), "w")
 
+    # boundary region file
+    region_file = open("%s-boundary-%d.reg" % (SB, nside), "w")
     region_file.write(first_line)
     region_file.write(second_line)
     region_file.write(third_line)
-
     for region in regions:
         region_file.write(region + " \n")
     region_file.close()
 
+    # centers region file
     center_file = open("%s-center-%d.reg" % (SB, nside), "w")
     center_file.write(first_line)
     center_file.write(second_line)
     center_file.write(third_line)
-
     for center in centers:
         center_file.write(center + " \n")
     center_file.close()
+
+    # text region file
+    text_file = open("%s-text-%d.reg" % (SB, nside), "w")
+    text_file.write(first_line)
+    text_file.write(second_line)
+    text_file.write(third_line)
+    for text in texts:
+        text_file.write(text + " \n")
+    text_file.close()
 
 
 def reference_header(naxis, cdelt):
