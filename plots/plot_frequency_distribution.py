@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Plot detection x frequency distribution to help with quality checking
+
+"""
+
 import os
 import sys
 import math

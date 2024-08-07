@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Add summary figure to 'plot' column for
+Add summary figure to 'plot' column for WALLABY products
+
 """
 
 import io
