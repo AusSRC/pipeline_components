@@ -15,6 +15,7 @@ import warnings
 import logging
 from dotenv import load_dotenv
 from functools import partial
+from itertools import islice
 import numpy as np
 import astropy.units as u
 from astropy.io import fits
@@ -61,12 +62,7 @@ async def milkyway_summary(pool, points, detection):
         logger.error(f"mom0, mom1 or spec missing for detection {detection['id']}")
         return
 
-    if not product["pv"]:
-        logger.error(f"pv missing for detection {detection['id']} [need to re-run sofia with outputs.writePV=true]")
-        return
-
     product_id = int(product['id'])
-
     logger.info(f"Processing product id: {product_id}")
 
     # Plot figure size
@@ -242,14 +238,15 @@ async def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--run', type=str, required=True, help='Run name')
     parser.add_argument('-e', '--env', type=str, required=False, default='database.env', help='Database environment file')
+    parser.add_argument('-n', '--max', type=int, required=False, default=10, help='Max number of concurrent downloads')
     args = parser.parse_args(argv)
     assert os.path.exists(args.env), f'Provided environment file {args.env} does not exist'
     load_dotenv(args.env)
     db_creds = {
-        "host": os.environ['DATABASE_HOST'],
-        "database": os.environ['DATABASE_NAME'],
-        "user": os.environ['DATABASE_USER'],
-        "password": os.environ['DATABASE_PASSWORD']
+        'host': os.environ['DATABASE_HOST'],
+        'database': os.environ['DATABASE_NAME'],
+        'user': os.environ['DATABASE_USER'],
+        'password': os.environ['DATABASE_PASSWORD']
     }
     pool = await asyncpg.create_pool(
         **db_creds,
@@ -270,13 +267,26 @@ async def main(argv):
     y = [int(d['y']) for d in detections]
     points = np.array([x, y])
 
-    # Update
-    await milkyway_summary(pool, points, detections[0])
+    # Run async with max tasks
+    total = len(detections)
+    count = 0
+    it = iter(detections)
+    while True:
+        chunk = list(islice(it, args.max))
+        if not chunk:
+            break
+
+        task_list = [asyncio.create_task(milkyway_summary(pool, points, c)) for c in chunk]
+        await asyncio.gather(*task_list)
+
+        count += len(task_list)
+        logging.info(f"Processed {count} of {total} Run: {args.run}")
+
 
     # Finish
     await pool.close()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     argv = sys.argv[1:]
     asyncio.run(main(argv))
