@@ -73,15 +73,6 @@ async def milkyway_summary(pool, points, detection):
     plt.rcParams["font.family"] = ["serif"]
     plt.rcParams["figure.figsize"] = (8, 8)
 
-    # Open PV diagram
-    with io.BytesIO() as buf:
-        buf.write(product["pv"])
-        buf.seek(0)
-        pv_hdul = await loop.run_in_executor(None, partial(fits.open, buf))
-        pv_hdu = pv_hdul[0]
-        pv_data = pv_hdu.data
-        pv_wcs = WCS(pv_hdu.header)
-
     # Open moment 0 image
     with io.BytesIO() as buf:
         buf.write(product["mom0"])
@@ -147,23 +138,22 @@ async def milkyway_summary(pool, points, detection):
         logger.error(f'Download error of DSS image for product id: {product_id}, error: {e}')
         raise e
 
-    # Create subplots
-
-    # Plot PV
-    pv_wcs.wcs.crval = np.array([pv_wcs.wcs.crval[0], pv_wcs.wcs.crval[1] / 1e6])
-    pv_wcs.wcs.cdelt = np.array([pv_wcs.wcs.cdelt[0], pv_wcs.wcs.cdelt[1] / 1e6])
-    ax2 = plt.subplot2grid((3, 2), (0, 0), projection=pv_wcs)
-    ax2.imshow(pv_data)
-    ax2.set_title("PV diagram")
-    ax2.set_xlabel("Offset [deg]")
-    ax2.set_ylabel("Freq [MHz]")
-    ax2.set_aspect('auto')
+    # Plot moment 0
+    ax2 = plt.subplot2grid((3, 2), (0, 0), projection=wcs)
+    ax2.imshow(mom0, origin="lower")
+    ax2.grid(color="grey", ls="solid")
+    ax2.set_xlabel("Right ascension (J2000)")
+    ax2.set_ylabel("Declination (J2000)")
+    ax2.tick_params(axis="x", which="both", left=False, right=False)
+    ax2.tick_params(axis="y", which="both", top=False, bottom=False)
+    ax2.set_title("moment 0")
+    ar = get_aspect(ax2)
 
     # Plot DSS image with HI contours
     interval = PercentileInterval(99.0)
     bmin, bmax = interval.get_limits(hdu.data)
     ax = plt.subplot2grid((3, 2), (0, 1), projection=wcs_opt)
-    ax.imshow(hdu.data, origin="lower", vmin=bmin, vmax=bmax)
+    ax.imshow(hdu.data, origin="lower", vmin=bmin, vmax=bmax, aspect=str(ar))
     ax.contour(
         hdu_mom0.data,
         transform=ax.get_transform(wcs),
