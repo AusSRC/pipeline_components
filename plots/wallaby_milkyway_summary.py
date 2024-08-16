@@ -204,8 +204,10 @@ async def milkyway_summary(pool, points, detection):
 
     # Plot location of detection
     ax5 = plt.subplot2grid((3, 2), (2, 0), colspan=2)
-    ax5.scatter(points[0], points[1], marker='.', alpha=0.5)
-    ax5.scatter(detection['x'], detection['y'], marker='o', alpha=0.5, color='red')
+    cm = plt.cm.get_cmap('RdYlBu_r')
+    sc = ax5.scatter(points[0], points[1], c=points[2], vmin=min(points[2]), vmax=max(points[2]), s=35, cmap=cm, marker='.', alpha=0.5)
+    plt.colorbar(sc, ax=ax5, label='km/s')
+    ax5.scatter(detection['x'], detection['y'], s=100, marker='o', facecolors='none', edgecolors='green')
     ax5.set_title("Detection location")
     ax5.set_aspect('auto')
 
@@ -265,7 +267,9 @@ async def main(argv):
     # scatter plot of detection positions
     x = [int(d['x']) for d in detections]
     y = [int(d['y']) for d in detections]
-    points = np.array([x, y])
+    freq = np.array([int(d['freq']) for d in detections])
+    velocity = C * (HI_RESTFREQ / freq - 1) / 1e3
+    points = np.array([x, y, velocity.tolist()])
 
     # Run async with max tasks
     total = len(detections)
