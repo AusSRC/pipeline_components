@@ -95,6 +95,7 @@ def parse_args(argv):
         required=False,
         help="Manifest Output",)
 
+    parser.add_argument("-t", "--timeout", type=int, required=False, default=3000, help="CASDA download file timeout [seconds]")
 
     args = parser.parse_args(argv)
     return args
@@ -212,7 +213,7 @@ async def main(argv):
         for url in url_list:
             if url.endswith('checksum'):
                 continue
-            futures.append(executor.submit(download_file, url=url, check_exists=True, output=args.output, timeout=3000))
+            futures.append(executor.submit(download_file, url=url, check_exists=True, output=args.output, timeout=args.timeout))
 
         for future in concurrent.futures.as_completed(futures):
             file_list.append(future.result())
