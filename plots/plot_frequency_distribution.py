@@ -31,11 +31,12 @@ async def main(argv):
         "user": os.environ["DATABASE_USER"],
         "password": os.environ["DATABASE_PASSWORD"]
     }
+    schema = os.environ["DATABASE_SCHEMA"]
 
     # Get detections
-    conn = await asyncpg.connect(dsn=None, **d_dsn)
-    run = await conn.fetchrow('SELECT * FROM wallaby.run WHERE name=$1', args.run)
-    data = await conn.fetch('SELECT (name, f_sum, freq) FROM wallaby.detection WHERE run_id=$1', int(run['id']))
+    conn = await asyncpg.connect(dsn=None, **d_dsn, server_settings={'search_path': schema})
+    run = await conn.fetchrow('SELECT * FROM run WHERE name=$1', args.run)
+    data = await conn.fetch('SELECT (name, f_sum, freq) FROM detection WHERE run_id=$1', int(run['id']))
     data = [d['row'] for d in data]
     detections = [d[0] for d in list(data)]
     f_sum = [math.log10(float(d[1])) for d in list(data)]
