@@ -72,21 +72,29 @@ def points_within_circle(x0, y0, radius, num_points=4):
     num_points: is a number of sample points within a circular beam.
 
     """
-
     angle = numpy.linspace(0, 360, num_points)
     angle = numpy.deg2rad(angle)
 
-    if (len(x0) > 1) and (len(y0) > 1):
-        x_corners = []
-        y_corners = []
+    if isinstance(x0, list):
+        ra_corners = []
+        dec_corners = []
         for (x_0, y_0) in zip(x0, y0):
-            x_corners.append(radius * numpy.cos(angle) + x_0)
-            y_corners.append(radius * numpy.sin(angle) + y_0)
-    else:
-        x_corners = radius * numpy.cos(angle) + x0
-        y_corners = radius * numpy.sin(angle) + y0
 
-    return x_corners, y_corners
+            declination = radius * numpy.sin(angle) + y_0
+            dec_corners.append( declination )
+            ra_corners.append( (radius * numpy.cos(angle))/numpy.cos(numpy.deg2rad(declination)) + x_0 )
+
+    else:
+        dec_corners = radius * numpy.sin(angle) + y0
+        ra_corners =  (radius * numpy.cos(angle))/numpy.cos(numpy.deg2rad(dec_corners)) + x0
+
+    ra_corners = numpy.asarray(ra_corners)
+    dec_corners = numpy.asarray(dec_corners)
+
+    ra_corners = ra_corners.flatten()
+    dec_corners = dec_corners.flatten()
+
+    return ra_corners, dec_corners
 
 
 def get_healpix_tiles(ra_deg, dec_deg):
