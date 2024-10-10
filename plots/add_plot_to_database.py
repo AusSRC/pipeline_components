@@ -65,6 +65,11 @@ async def main(argv):
     conn = await asyncpg.connect(dsn=None, **d_dsn, server_settings={'search_path': schema})
     async with conn.transaction():
         run = await conn.fetchrow('SELECT * FROM run WHERE name=$1', args.run)
+        logging.info(run)
+        if not run:
+            logging.info(f'Run with name {args.run} not found. Creating.')
+            res = await conn.execute("INSERT INTO run (name, sanity_thresholds) VALUES ($1, '{}')", args.run)
+            run = await conn.fetchrow('SELECT * FROM run WHERE name=$1', args.run)
         run_id = int(run['id'])
         logging.info(f'Inserting into run {args.run} [{run_id}]')
         res = await conn.fetchrow(query, run_id, filebytes)
