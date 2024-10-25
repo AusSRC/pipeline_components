@@ -154,6 +154,8 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
     # assumed values for CRPIX_1 (RA) CRPIX_2 (DEC)
     crpix1, crpix2 = crpix1_and_2
 
+    header_options = ['CTYPE','CRVAL','CDELT','CRPIX','CUNIT']
+
     with fits.open(original_image) as hdul_o:
         with fits.open(template_fits) as hdul_t:
             naxis_template = hdul_t[0].header['NAXIS']
@@ -162,11 +164,38 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
             if naxis_original != naxis_template:
                 raise ValueError(f"Please provide template file with same naxis as input cube. Currently its {naxis_template} vs {naxis_original}")
 
-            # assumes last two axes are always RA,DEC
+            # Also check whether the template file has the same axes CTYPEs as the original input cube.
+            ## TODO: 1:  or imposing the axes ordering. Have the MFS image have the same freq/stokes axes as the cubes?
+        
+            ## TODO: 2a:  do we want two different template files for the MFS.fits and .contcube.fits files?
+            ## TODO: 2b: or do we want to simply take 3rd and 4th axes from the original file as well?
+            ## first one might be messy in case we have only 3 axes or 4 axes but different axes than the template file somehow
+
+            # for i in range(naxis_original):
+            #     # If not, then it's not a good template file
+            #     ctype_o = hdul_o[0].header[f"CTYPE{i+1}"]
+            #     ctype_t = hdul_t[0].header[f"CTYPE{i+1}"]
+            #     if ctype_o[:2] != ctype_t[:2]: # checking first two characters should be good enough. 
+            #                                   # Because different "RA" and "DEC" projections should be fine. 
+            #         raise ValueError(f"CTYPE{i+1} is {ctype_o} in original image but {ctype_t} in template fits")
+
+            # Check assumption that first two axes in the header are RA DEC
+            assert "RA" in hdul_t[0].header["CTYPE1"], f"Expected RA in template.fits first axis, got {hdul_t[0].header['CTYPE1']}"
+            assert "DEC" in hdul_t[0].header["CTYPE2"], f"Expected DEC in template.fits second axis, got {hdul_t[0].header['CTYPE2']}"
+
+            # which leads to assumption that last two axes in numpy array are DEC, RA
             shape_o = hdul_o[0].data.shape[:-2]
             shape_t = hdul_t[0].data.shape[2:]
             # new tile should be same RA,DEC shape as template, but freq,stokes from original file
             shape_new = shape_o + shape_t
+
+            ### FOR NOW: implement FREQ/STOKES ordering of the original file (option 2b)
+            for option in header_options:
+                for i in range(3,naxis_original+1): #i.e. [3,4] if NAXIS=4
+                    # if verbose
+                    print(f'Setting hdul_t {option}{i} from {hdul_t[0].header[f"{option}{i}"]} to {hdul_o[0].header[f"{option}{i}"]}')
+
+                    hdul_t[0].header[f"{option}{i}"] = hdul_o[0].header[f"{option}{i}"]
 
             # create NaN tile in correct shape
             data_new = np.zeros(shape_new,dtype=np.float32)*np.nan # Make sure dtype is float32
