@@ -16,7 +16,7 @@ import csv
 import time
 import argparse
 import logging
-from casatasks import imhead, imregrid, exportfits
+from casatasks import imhead, imregrid, exportfits # type: ignore
 from astropy import units as u
 from astropy_healpix import HEALPix
 from regions import Regions
@@ -169,7 +169,7 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
             shape_new = shape_o + shape_t
 
             # create NaN tile in correct shape
-            data_new = np.zeros(shape_new)*np.nan
+            data_new = np.zeros(shape_new,dtype=np.float32)*np.nan # Make sure dtype is float32
 
             # adjust header
             hdul_t[0].header["CRPIX1"] = crpix1
