@@ -16,7 +16,7 @@ import csv
 import time
 import argparse
 import logging
-from casatasks import imhead, imregrid, exportfits
+from casatasks import imhead, imregrid, exportfits # type: ignore
 from astropy import units as u
 from astropy_healpix import HEALPix
 from regions import Regions
@@ -147,31 +147,82 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
     outfile        -- str       -- name of output file written
 
     Simply masks the whole template tile .fits file and re-assign parameters CRPIX1 and CRPIX2
-    to those given by the user. Makes sure the other axes (freq,stokes) are the same as the original_imagae
+    to those given by the user. Makes sure the other axes (freq,stokes) are the same length as the input image
+    but have the ordering of the template image
 
     Saves the result in a fitsfile "outfile"
     """
     # assumed values for CRPIX_1 (RA) CRPIX_2 (DEC)
     crpix1, crpix2 = crpix1_and_2
 
+    header_options = ['CRVAL','CDELT','CRPIX','CUNIT'] # 'CTYPE',
+
     with fits.open(original_image) as hdul_o:
-        with fits.open(template_fits) as hdul_t:
+        with fits.open(template_fits) as hdul_t: #hdul_t will be overwritten with nan tile
+
+            # Get NAXIS for template and input file
             naxis_template = hdul_t[0].header['NAXIS']
             naxis_original = hdul_o[0].header["NAXIS"]
             
             if naxis_original != naxis_template:
                 raise ValueError(f"Please provide template file with same naxis as input cube. Currently its {naxis_template} vs {naxis_original}")
 
-            # assumes last two axes are always RA,DEC
+            # Also check whether the template file has the same axes CTYPEs as the original input cube.
+            # for i in range(naxis_original):
+            #     # If not, then it's not a good template file
+            #     ctype_o = hdul_o[0].header[f"CTYPE{i+1}"]
+            #     ctype_t = hdul_t[0].header[f"CTYPE{i+1}"]
+            #     if ctype_o[:2] != ctype_t[:2]: # checking first two characters should be good enough. 
+            #                                   # Because different "RA" and "DEC" projections should be fine. 
+            #         raise ValueError(f"CTYPE{i+1} is {ctype_o} in original image but {ctype_t} in template fits")
+
+            # Check assumption that first two axes in the header are RA DEC
+            assert "RA" in hdul_t[0].header["CTYPE1"], f"Expected RA in template.fits first axis, got {hdul_t[0].header['CTYPE1']}"
+            assert "DEC" in hdul_t[0].header["CTYPE2"], f"Expected DEC in template.fits second axis, got {hdul_t[0].header['CTYPE2']}"
+            # Make sure template follows the RA,DEC,freq,stokes axis ordering. Decided by technical-core team
+            assert "FREQ" in hdul_t[0].header['CTYPE3'], "template fits file should have axis order RA,DEC,FREQ,STOKES"
+            assert "STOKES" in hdul_t[0].header['CTYPE4'], "template fits file should have axis order RA,DEC,FREQ,STOKES"
+
+            # which leads to assumption that last two axes in numpy array are DEC, RA
             shape_o = hdul_o[0].data.shape[:-2]
             shape_t = hdul_t[0].data.shape[2:]
-            # new tile should be same RA,DEC shape as template, but freq,stokes from original file
+            # new tile should be same RA,DEC shape as template, but freq,stokes shape from original file
             shape_new = shape_o + shape_t
 
-            # create NaN tile in correct shape
-            data_new = np.zeros(shape_new)*np.nan
+            # create NaN tile data shape
+            data_new = np.zeros(shape_new,dtype=np.float32)*np.nan # Make sure dtype is float32
 
-            # adjust header
+            # Check if the input file has the same axis ordering of the template file.
+            # By default, we expect cubes to have RA,DEC,STOKES,FREQ 
+            # but the template fits file will have RA,DEC,FREQ,STOKES
+
+            axis_dict = {}
+            # Input image and template image 3rd / 4th axis is the same:
+            if hdul_t[0].header['CTYPE3'] == hdul_o[0].header['CTYPE3']:
+                axis_dict[3] = 3
+            if hdul_t[0].header['CTYPE4'] == hdul_o[0].header['CTYPE4']:
+                axis_dict[4] = 4
+            # Input image and template image 3rd / 4th axis is different
+            if hdul_t[0].header['CTYPE3'] == hdul_o[0].header['CTYPE4']:
+                axis_dict[3] = 4
+            if hdul_t[0].header['CTYPE4'] == hdul_o[0].header['CTYPE3']:
+                axis_dict[4] = 3
+
+            # Take 3rd and 4th axis values from input image and put them into header in correct order
+            for option in header_options:
+                for i in range(3,naxis_original+1): #i.e. [3,4] if NAXIS=4
+                    # if verbose
+                    logging.info(f'Setting hdul_t {option}{i} from {hdul_t[0].header[f"{option}{i}"]} to {hdul_o[0].header[f"{option}{axis_dict[i]}"]}')
+
+                    hdul_t[0].header[f"{option}{i}"] = str(hdul_o[0].header[f"{option}{axis_dict[i]}"])
+
+            # If input image and template image had different axis ordering, we have to swap data axes
+            if (axis_dict[3] == 4) and (axis_dict[4] == 3):
+                # Go to STOKES,FREQ,RA,DEC
+                data_new = np.moveaxis(data_new, 1, 0)
+                logging.info(f'Swapped input data 3rd and 4th axis. Shape now is {data_new.shape}')
+
+            # adjust header CRPIX as well
             hdul_t[0].header["CRPIX1"] = crpix1
             hdul_t[0].header["CRPIX2"] = crpix2
             for i in range(2,len(shape_new)):
@@ -185,6 +236,50 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
             hdul_t[0].data = data_new
             hdul_t[0].writeto(outfile, overwrite=False) # should be the first of its name
 
+def check_and_swap_fits_axes(fits_filename):
+    """
+    Check the axes of a FITS file and swap them if necessary.
+
+    The function ensures that the 3rd axis is 'FREQ' and the 4th axis is 'STOKES'.
+        If, instead, the 3rd axis is 'STOKES' and the 4th axis is 'FREQ', it swaps them.
+        
+    If the FITS file has only two axes, a ValueError is raised.
+
+    INPUTS:
+    fits_filename : str
+        Path to the FITS file to be checked and potentially modified.
+
+    RETURNS:
+    None
+        The function modifies the FITS file in place if the axes need to be swapped.
+    """
+    with fits.open(fits_filename, mode='update') as hdul:
+        hdr = hdul[0].header
+        data = hdul[0].data
+
+        if data.ndim < 4:
+            raise ValueError("FITS file has only {data.ndim} axes, expected at least four axes.")
+
+        # Check the CTYPE of axes
+        ctype3 = hdr.get('CTYPE3', '').strip()
+        ctype4 = hdr.get('CTYPE4', '').strip()
+
+        if ctype3 == 'FREQ' and ctype4 == 'STOKES':
+            # Axes are correct, no changes needed
+            return
+        elif ctype3 == 'STOKES' and ctype4 == 'FREQ':
+            logging.info(f"Swapping 3rd and 4th axis of {fits_filename} to achieve RA,DEC,FREQ,STOKES")
+            # Swap the axes and update the header and data
+            data = np.swapaxes(data, 1, 0)  # Swap the 4th and 3rd axes (considering reversed shape)
+
+            # Update header options
+            header_options = ['CTYPE', 'CRVAL', 'CDELT', 'CRPIX', 'CUNIT']
+            for option in header_options:
+                hdr[f'{option}3'], hdr[f'{option}4'] = hdr[f'{option}4'], hdr[f'{option}3']
+
+            # Overwrite the data and header in the FITS file
+            hdul[0].data = data
+            hdul.flush()  # Save changes to the file
 
 def main(argv):
     """Run with the following command:
@@ -266,6 +361,7 @@ def main(argv):
 
         output_filename = "%s_%s-%d.image" % (prefix, args.obs_id, pixel_ID[i])
         output_name = os.path.join(write_dir, output_filename)
+        fitsimage=output_name.split(".image")[0] + ".fits"
 
         ##############
         # below lines added by Erik to 
@@ -277,8 +373,6 @@ def main(argv):
         if np.isnan(masked_data).all():
             logging.warning("WARNING: Tile is outside the observation. If this is the case for all frequencies, then the tile does not actually require this observation.")
             # todo: check/log this somehow? It would verify the radius needed for the tile
-
-            fitsimage=output_name.split(".image")[0] + ".fits"
             logging.info(f"Creating NaN tile {fitsimage}")
             create_nan_tile(image, tile_template, template_header["csys"]["direction0"]["crpix"], fitsimage)
         ##############
@@ -328,7 +422,7 @@ def main(argv):
                 logging.info("Converting the casa image to fits image.")
                 exportfits(
                     imagename=output_name,
-                    fitsimage=output_name.split(".image")[0] + ".fits",
+                    fitsimage=fitsimage,
                     overwrite=True,
                     stokeslast=False)
 
@@ -339,6 +433,9 @@ def main(argv):
                 logging.error(f"There was an exception: {e}")
                 logging.info("Skipping tile")
                 # TODO: need to update csv file
+
+        # Finally, check the axes ordering of the tiled image. Enforce RA,DEC,FREQ,STOKES
+        check_and_swap_fits_axes(fitsimage)
 
     end_tiling = time.time()
     logging.info(
