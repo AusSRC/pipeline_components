@@ -54,7 +54,8 @@ async def main(argv):
         "host": os.environ["DATABASE_HOST"],
         "database": os.environ["DATABASE_NAME"],
         "user": os.environ["DATABASE_USER"],
-        "password": os.environ["DATABASE_PASSWORD"]
+        "password": os.environ["DATABASE_PASSWORD"],
+        "port": os.getenv('DATABASE_PORT', 5432)
     }
     schema = os.environ["DATABASE_SCHEMA"]
 

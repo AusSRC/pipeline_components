@@ -4,7 +4,7 @@ python-dotenv
 wheel
 argparse
 matplotlib
-astropy==5.2.0
+astropy
 astroquery
 numpy
 retrying-async
