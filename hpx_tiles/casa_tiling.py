@@ -37,12 +37,12 @@ def tileID_to_region(tileID):
     RA, DEC = corner.value
     RA = RA[0]
     DEC = DEC[0]
-    polygon_string = 'polygon(%f, %f, %f, %f, %f, %f, %f, %f)'%(RA[0], DEC[0],  RA[1], DEC[1], RA[2], DEC[2], RA[3], DEC[3])    
+    polygon_string = 'polygon(%f, %f, %f, %f, %f, %f, %f, %f)'%(RA[0], DEC[0],  RA[1], DEC[1], RA[2], DEC[2], RA[3], DEC[3])
     with open("regionfile.reg", 'w') as f:
         f.write('# Region file format: DS9 astropy/regions')
         f.write('\n')
         f.write('fk5')
-        f.write('\n')        
+        f.write('\n')
         f.write(polygon_string)
 
     r = Regions.read("regionfile.reg")
@@ -54,13 +54,13 @@ def tileID_to_region(tileID):
 def mask_regions(fitsimage, region, maskoutside=True):
     """@Erik Osinga
     Given a FITS image and a DS9 region file, mask the pixels based on the regions.
-    
+
     Args:
         fitsimage (str): Path to the FITS image file.
         ds9region (str): Path to the DS9 region file.
         maskoutside (bool): If True, mask everything outside the region.
                             If False, mask everything inside the region.
-    
+
     Returns:
         np.ndarray: Masked data array, same shape as input fits image.
     """
@@ -72,8 +72,8 @@ def mask_regions(fitsimage, region, maskoutside=True):
             raise ValueError(f"Expected one region file but found {len(r)}")
         # Convert the region to a 2D pixel mask
         rpix = r[0].to_pixel(wcs.WCS(hdu[0].header).celestial)
-        
-        # assumes final 2 axes are DEC,RA axis. 
+
+        # assumes final 2 axes are DEC,RA axis.
         # fits.open() reads in reverse order, so if first two fits axes are RA,DEC we're good
         if ("RA" not in hdu[0].header['CTYPE1']) or ("DEC" not in hdu[0].header['CTYPE2']):
             raise ValueError("Assumed first two axes are RA,DEC. But they are not.")
@@ -108,7 +108,7 @@ def mask_regions(fitsimage, region, maskoutside=True):
 
     return data
 
-def parse_args(argv):# 
+def parse_args(argv):#
     parser = argparse.ArgumentParser("Generate tiles for a specfic SB.")
     parser.add_argument("-i", dest="obs_id", help="Observation ID.", required=True)
     parser.add_argument("-c", dest="cube", help="Image cube.", required=True)
@@ -134,9 +134,9 @@ def parse_args(argv):#
     args = parser.parse_args(argv)
     return args
 
-def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
+def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile, overwrite=True):
     """@Erik Osinga
-    
+
     Create a "tile" from an SB that's outside the tile using a template tile .fits file.
         i.e. Creates a tile with all-NaNs with the same freq and stokes axis as the original_image.
 
@@ -163,7 +163,7 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
             # Get NAXIS for template and input file
             naxis_template = hdul_t[0].header['NAXIS']
             naxis_original = hdul_o[0].header["NAXIS"]
-            
+
             if naxis_original != naxis_template:
                 raise ValueError(f"Please provide template file with same naxis as input cube. Currently its {naxis_template} vs {naxis_original}")
 
@@ -172,8 +172,8 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
             #     # If not, then it's not a good template file
             #     ctype_o = hdul_o[0].header[f"CTYPE{i+1}"]
             #     ctype_t = hdul_t[0].header[f"CTYPE{i+1}"]
-            #     if ctype_o[:2] != ctype_t[:2]: # checking first two characters should be good enough. 
-            #                                   # Because different "RA" and "DEC" projections should be fine. 
+            #     if ctype_o[:2] != ctype_t[:2]: # checking first two characters should be good enough.
+            #                                   # Because different "RA" and "DEC" projections should be fine.
             #         raise ValueError(f"CTYPE{i+1} is {ctype_o} in original image but {ctype_t} in template fits")
 
             # Check assumption that first two axes in the header are RA DEC
@@ -193,7 +193,7 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
             data_new = np.zeros(shape_new,dtype=np.float32)*np.nan # Make sure dtype is float32
 
             # Check if the input file has the same axis ordering of the template file.
-            # By default, we expect cubes to have RA,DEC,STOKES,FREQ 
+            # By default, we expect cubes to have RA,DEC,STOKES,FREQ
             # but the template fits file will have RA,DEC,FREQ,STOKES
 
             axis_dict = {}
@@ -232,9 +232,9 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile):
 
                 hdul_t[0].header[f"NAXIS{i}"] = shape_new[::-1][i]
                 hdul_t[0].header[f"NAXIS{i}"] = shape_new[::-1][i]
-            
+
             hdul_t[0].data = data_new
-            hdul_t[0].writeto(outfile, overwrite=False) # should be the first of its name
+            hdul_t[0].writeto(outfile, overwrite=overwrite)  # should be the first of its name
 
 def check_and_swap_fits_axes(fits_filename):
     """
@@ -242,7 +242,7 @@ def check_and_swap_fits_axes(fits_filename):
 
     The function ensures that the 3rd axis is 'FREQ' and the 4th axis is 'STOKES'.
         If, instead, the 3rd axis is 'STOKES' and the 4th axis is 'FREQ', it swaps them.
-        
+
     If the FITS file has only two axes, a ValueError is raised.
 
     INPUTS:
@@ -364,8 +364,8 @@ def main(argv):
         fitsimage=output_name.split(".image")[0] + ".fits"
 
         ##############
-        # below lines added by Erik to 
-        # check if there are any non-NaN pixels in the tile region 
+        # below lines added by Erik to
+        # check if there are any non-NaN pixels in the tile region
         r = tileID_to_region(pixel_ID[i])
         masked_data = mask_regions(image, r, maskoutside=True)
         # if there are only NaN pixels, we don't need to make this tile from the current observation
@@ -374,7 +374,7 @@ def main(argv):
             logging.warning("WARNING: Tile is outside the observation. If this is the case for all frequencies, then the tile does not actually require this observation.")
             # todo: check/log this somehow? It would verify the radius needed for the tile
             logging.info(f"Creating NaN tile {fitsimage}")
-            create_nan_tile(image, tile_template, template_header["csys"]["direction0"]["crpix"], fitsimage)
+            create_nan_tile(image, tile_template, template_header["csys"]["direction0"]["crpix"], fitsimage, overwrite=True)
         ##############
 
         else: # if there are finite value pixels, proceed as before

@@ -4,5 +4,6 @@ numpy
 astropy
 astropy_healpix
 pyregion
+regions
 casatools==6.5.2.26
 casatasks==6.5.2.26
