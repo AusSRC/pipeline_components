@@ -15,23 +15,20 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-f", dest="files", nargs="+", help="Files to join in frequency.", required=True)
-
     parser.add_argument(
         "-o",
         dest="output",
         help="Output filename and path for joined fits file",
         required=True,)
-
     parser.add_argument(
         "-a",
         dest="axis",
-        type=int,
-        help="Frequency axis index in split fits files",
-        default=0,)
-
+        type=str,
+        help="Fits header CTYPE axis on which to join",
+        default='FREQ',
+        required=False)
     parser.add_argument(
         "--overwrite", dest="overwrite", action="store_true", default=False)
-
     args = parser.parse_args(argv)
     return args
 
@@ -62,6 +59,23 @@ def main(argv):
     # NOTE: Order of files here determines how they are joined...
     files.sort(key=split_key)
     logging.info(f"Joining fits files: {files}")
+    logging.info(f'Joining on axis {args.axis}')
+
+    # Check axis that contains CTYPE defined by user argument.
+    # NOTE: assumes all files have the same axis order
+    axis = None
+    with fits.open(files[0]) as hdul:
+        header = hdul[0].header
+        naxis = int(header['NAXIS'])
+        for i in range(naxis):
+            card = str(header[f'CTYPE{str(i+1)}']).strip()
+            if card == args.axis:
+                axis = naxis - (i + 1)
+                logging.info(f'Joining on data axis {axis} for {args.axis}')
+                break
+    if axis is None:
+        raise Exception(f'Did not find axis in fits header to join on: {args.axis}')
+
     for f in files:
         if not os.path.exists(f):
             raise Exception(f"Sub-cube file at {files} not found.")
@@ -74,7 +88,7 @@ def main(argv):
                 logging.info(f"{header['CTYPE1']}, {header['CTYPE2']}, {header['CTYPE3']}, {header['CTYPE4']}")
                 data = hdul[0].data
             else:
-                data = np.concatenate((data, hdul[0].data), axis=args.axis)
+                data = np.concatenate((data, hdul[0].data), axis=axis)
             logging.info(f"Output data shape: {data.shape}")
 
     hdu = fits.PrimaryHDU(header=header, data=data)
