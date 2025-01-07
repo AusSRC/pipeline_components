@@ -358,10 +358,9 @@ def main(argv):
 
         # Update the template header dictionary from / for imregrid
         template_header["csys"]["direction0"]["crpix"] = np.array([ra, dec])
-
         output_filename = "%s_%s-%d.image" % (prefix, args.obs_id, pixel_ID[i])
         output_name = os.path.join(write_dir, output_filename)
-        fitsimage=output_name.split(".image")[0] + ".fits"
+        fitsimage = output_name.split(".image")[0] + ".fits"
 
         ##############
         # below lines added by Erik to
@@ -378,7 +377,6 @@ def main(argv):
         ##############
 
         else: # if there are finite value pixels, proceed as before
-
             try:
                 if len(axis) == 4:
                     fourth_axis = axis[3]
@@ -402,8 +400,6 @@ def main(argv):
                     else:
                         template_header["shap"] = np.array([naxis, naxis, 1])
 
-
-
                 # tiling, outputs tile fits in CASA image.
                 imregrid(
                     imagename=image,
@@ -424,14 +420,16 @@ def main(argv):
                     imagename=output_name,
                     fitsimage=fitsimage,
                     overwrite=True,
-                    stokeslast=False)
+                    stokeslast=False
+                )
 
                 # delete all casa image files.
                 logging.info("Deleting the casa image. ")
                 os.system("rm -rf %s" % output_name)
             except Exception as e:
                 logging.error(f"There was an exception: {e}")
-                logging.info("Skipping tile")
+                logging.info(f"Skipping tile {fitsimage}")
+                continue
                 # TODO: need to update csv file
 
         # Finally, check the axes ordering of the tiled image. Enforce RA,DEC,FREQ,STOKES
