@@ -195,12 +195,12 @@ def reference_header(naxis, cdelt):
     hdr += "NAXIS1  =                %d / length of data axis 1 \n" % naxis
     hdr += "NAXIS2  =                %d / length of data axis 2 \n" % naxis
     hdr += "EXTEND  =                    F / No FITS extensions are present \n"
-    # NOTE: update adding 1.0 to CRPIX 1/2 to fix [2049, 2049, X, X] shape error
+    # NOTE: update adding 0.5 to CRPIX 1/2 to fix [2049, 2049, X, X] shape error
     hdr += "CRPIX1  =             %r / Coordinate reference pixel \n" % (
-        (naxis / 2.0) + 1.0
+        (naxis / 2.0) + 0.5
     )
     hdr += "CRPIX2  =             %r / Coordinate reference pixel \n" % (
-        (naxis / 2.0) + 1.0
+        (naxis / 2.0) + 0.5
     )
     hdr += "PC1_1   =           0.70710677 / Transformation matrix element \n"
     hdr += "PC1_2   =           0.70710677 / Transformation matrix element \n"
