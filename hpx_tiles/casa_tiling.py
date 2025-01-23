@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This code performs the tiling of an image cube with CASA.
+HPX tiling of an image cube with CASA
 For a given image cube and tiling map (defines the locations of the HPX tiles in the area covered by the image cube)
 we will perform the regridding onto a template fits file based on the centre coordinates provided in the tiling map.
 The tiling map [csv] is created by `generate_tile_pixel_map.py`.
@@ -16,123 +16,70 @@ import csv
 import time
 import argparse
 import logging
-from casatasks import imhead, imregrid, exportfits # type: ignore
-from astropy import units as u
-from astropy_healpix import HEALPix
-from regions import Regions
+from casatasks import imhead, imregrid, exportfits  # type: ignore
+from regions import PolygonSkyRegion
 from astropy.io import fits
 from astropy import wcs
+from astropy import units as u
+from astropy_healpix import HEALPix
+from astropy.coordinates import SkyCoord
+
 
 logging.basicConfig(level=logging.INFO)
 
-def tileID_to_region(tileID):
-    """@Erik Osinga
-    Input; tile ID
-    Returns: Regions object (i.e. region) denoting the tile with hpx number "tileID"
+
+def tile_id_to_region(tile_id, nside=32):
+    """Create PolygonSkyRegion region object for a HPX tile from corner coordinates
+
     """
-    Nside=32
-    HPX_PIXEL = tileID
-    hp = HEALPix(nside=Nside, order='ring', frame='icrs')
-    corner = hp.boundaries_lonlat(HPX_PIXEL, step=1) * u.deg
-    RA, DEC = corner.value
-    RA = RA[0]
-    DEC = DEC[0]
-    polygon_string = 'polygon(%f, %f, %f, %f, %f, %f, %f, %f)'%(RA[0], DEC[0],  RA[1], DEC[1], RA[2], DEC[2], RA[3], DEC[3])
-    with open("regionfile.reg", 'w') as f:
-        f.write('# Region file format: DS9 astropy/regions')
-        f.write('\n')
-        f.write('fk5')
-        f.write('\n')
-        f.write(polygon_string)
+    hp = HEALPix(nside=nside, order='ring', frame='icrs')
+    corners = hp.boundaries_lonlat(tile_id, step=1) * u.deg
+    ra, dec = corners.value
+    corners_skycoord = SkyCoord(ra[0] * u.deg, dec[0] * u.deg, frame='fk5')
+    region = PolygonSkyRegion(corners_skycoord)
+    return region
 
-    r = Regions.read("regionfile.reg")
-    # clean up region file again
-    os.system("rm regionfile.reg")
 
-    return r
-
-def mask_regions(fitsimage, region, maskoutside=True):
-    """@Erik Osinga
-    Given a FITS image and a DS9 region file, mask the pixels based on the regions.
+def mask_regions(fits_image, region, mask_outside=True):
+    """Given a FITS image and a region object, mask the pixels based on the regions
 
     Args:
-        fitsimage (str): Path to the FITS image file.
-        ds9region (str): Path to the DS9 region file.
-        maskoutside (bool): If True, mask everything outside the region.
-                            If False, mask everything inside the region.
+        fits_image [str]:           Path to the FITS image file.
+        region [PolygonSkyRegion]:  Region object containing pixel corner sky coordinates
+        mask_outside [Boolean]:     If True: mask everything outside the region.
+                                    If False: mask everything inside the region.
 
     Returns:
         np.ndarray: Masked data array, same shape as input fits image.
+
     """
-    # Open the FITS file
-    with fits.open(fitsimage) as hdu:
-        # Read the region (assume its not a file but already a region object)
-        r = region
-        if len(r)>1:
-            raise ValueError(f"Expected one region file but found {len(r)}")
-        # Convert the region to a 2D pixel mask
-        rpix = r[0].to_pixel(wcs.WCS(hdu[0].header).celestial)
+    with fits.open(fits_image) as hdul:
+        hdu = hdul[0]
+        region_pixel = region.to_pixel(wcs.WCS(hdu.header).celestial)
 
-        # assumes final 2 axes are DEC,RA axis.
-        # fits.open() reads in reverse order, so if first two fits axes are RA,DEC we're good
-        if ("RA" not in hdu[0].header['CTYPE1']) or ("DEC" not in hdu[0].header['CTYPE2']):
-            raise ValueError("Assumed first two axes are RA,DEC. But they are not.")
+        # NOTE: Assume first axes are RA and DEC from header. Raise error if not true.
+        assert 'RA' in hdu.header['CTYPE1'], f"Fits header CTYPE1 should be RA. Got {hdu.header['CTYPE1']}."
+        assert 'DEC' in hdu.header['CTYPE2'], f"Fits header CTYPE2 should be DEC. Got {hdu.header['CTYPE1']}."
 
-        mask = rpix.to_mask().to_image(hdu[0].data.shape[-2:])
-
+        # Create mask array
+        mask = region_pixel.to_mask().to_image(hdu.data.shape[-2:])
+        mask_value = int(not mask_outside)
         if mask is None:
-            # then the region is outside the image
-            # mask everything
-            if maskoutside:
-                mask = np.zeros(hdu[0].data.shape[-2:])
-            else:
-                mask = np.ones(hdu[0].data.shape[-2:])
+            mask = np.ones(hdu.data.shape[-2:]) * mask_value
 
-        naxes = hdu[0].header['naxis']
-
-        if maskoutside:
-            # Mask everything outside the region
-            setmaskto = 0
+        # Apply mask
+        data = hdu.data
+        if int(hdu.header['NAXIS']) == 4:
+            data[:, :, mask == mask_value] = np.nan
+        elif int(hdu.header['NAXIS']) == 3:
+            data[:, mask == mask_value] = np.nan
+        elif int(hdu.header['NAXIS']) == 2:
+            data[mask == mask_value] = np.nan
         else:
-            # Mask everything inside the region
-            setmaskto = 1
-
-        if naxes == 4:
-            hdu[0].data[:, :, mask == setmaskto] = np.nan
-        elif naxes == 3:
-            hdu[0].data[:, mask == setmaskto] = np.nan
-        elif naxes == 2:
-            hdu[0].data[mask == setmaskto] = np.nan
-
-        data = hdu[0].data
+            raise ValueError(f"Unexpected value for NAXIS in fits header ({hdu.header['NAXIS']})")
 
     return data
 
-def parse_args(argv):#
-    parser = argparse.ArgumentParser("Generate tiles for a specfic SB.")
-    parser.add_argument("-i", dest="obs_id", help="Observation ID.", required=True)
-    parser.add_argument("-c", dest="cube", help="Image cube.", required=True)
-    parser.add_argument(
-        "-m", dest="map", help="Tiling map for the image cube [csv].", required=True)
-    parser.add_argument(
-        "-o",
-        dest="output",
-        help="Output write directory for tiles cubes.",
-        required=True,)
-    parser.add_argument(
-        "-t", dest="template", help="The template fits file.", required=True)
-
-    # Optional
-    parser.add_argument("-n", dest="naxis", type=int, required=False, default=2048)
-    parser.add_argument(
-        "-p",
-        dest="prefix",
-        type=str,
-        help="Prefix for output tile filenames",
-        required=False,
-        default="PoSSUM",)
-    args = parser.parse_args(argv)
-    return args
 
 def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile, overwrite=True):
     """@Erik Osinga
@@ -179,9 +126,15 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile, overwr
             # Check assumption that first two axes in the header are RA DEC
             assert "RA" in hdul_t[0].header["CTYPE1"], f"Expected RA in template.fits first axis, got {hdul_t[0].header['CTYPE1']}"
             assert "DEC" in hdul_t[0].header["CTYPE2"], f"Expected DEC in template.fits second axis, got {hdul_t[0].header['CTYPE2']}"
+
             # Make sure template follows the RA,DEC,freq,stokes axis ordering. Decided by technical-core team
-            assert "FREQ" in hdul_t[0].header['CTYPE3'], "template fits file should have axis order RA,DEC,FREQ,STOKES"
-            assert "STOKES" in hdul_t[0].header['CTYPE4'], "template fits file should have axis order RA,DEC,FREQ,STOKES"
+            # NOTE: for intermediate partial tiles it was decided that we keep the ra, dec, stokes, freq order for mosaicking with linmos
+            assert "STOKES" in hdul_t[0].header['CTYPE3'], "template fits file should have axis order RA,DEC,STOKES,FREQ"
+            assert "FREQ" in hdul_t[0].header['CTYPE4'], "template fits file should have axis order RA,DEC,STOKES,FREQ"
+
+            # Update BMAJ and BMIN in header
+            hdul_t[0].header["BMAJ"] = hdul_o[0].header["BMAJ"]
+            hdul_t[0].header["BMIN"] = hdul_o[0].header["BMIN"]
 
             # which leads to assumption that last two axes in numpy array are DEC, RA
             shape_o = hdul_o[0].data.shape[:-2]
@@ -190,7 +143,7 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile, overwr
             shape_new = shape_o + shape_t
 
             # create NaN tile data shape
-            data_new = np.zeros(shape_new,dtype=np.float32)*np.nan # Make sure dtype is float32
+            data_new = np.zeros(shape_new, dtype=np.float32) * np.nan  # Make sure dtype is float32
 
             # Check if the input file has the same axis ordering of the template file.
             # By default, we expect cubes to have RA,DEC,STOKES,FREQ
@@ -210,7 +163,7 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile, overwr
 
             # Take 3rd and 4th axis values from input image and put them into header in correct order
             for option in header_options:
-                for i in range(3,naxis_original+1): #i.e. [3,4] if NAXIS=4
+                for i in range(3, naxis_original + 1):  # i.e. [3,4] if NAXIS=4
                     # if verbose
                     logging.info(f'Setting hdul_t {option}{i} from {hdul_t[0].header[f"{option}{i}"]} to {hdul_o[0].header[f"{option}{axis_dict[i]}"]}')
 
@@ -236,50 +189,28 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile, overwr
             hdul_t[0].data = data_new
             hdul_t[0].writeto(outfile, overwrite=overwrite)  # should be the first of its name
 
-def check_and_swap_fits_axes(fits_filename):
-    """
-    Check the axes of a FITS file and swap them if necessary.
 
-    The function ensures that the 3rd axis is 'FREQ' and the 4th axis is 'STOKES'.
-        If, instead, the 3rd axis is 'STOKES' and the 4th axis is 'FREQ', it swaps them.
+def parse_args(argv):
+    parser = argparse.ArgumentParser("Generate tiles for a specfic SB.")
+    parser.add_argument("-i", dest="obs_id", help="Observation ID.", required=True)
+    parser.add_argument("-c", dest="cube", help="Image cube.", required=True)
+    parser.add_argument("-t", dest="template", help="The template fits file.", required=True)
+    parser.add_argument("-m", dest="map", help="Tiling map for the image cube [csv].", required=True)
+    parser.add_argument("-o", dest="output", help="Output write directory for tiles cubes.", required=True)
 
-    If the FITS file has only two axes, a ValueError is raised.
+    # Optional
+    parser.add_argument("-n", dest="naxis", type=int, required=False, default=2048)
+    parser.add_argument(
+        "-p",
+        dest="prefix",
+        type=str,
+        help="Prefix for output tile filenames",
+        required=False,
+        default="PoSSUM"
+    )
+    args = parser.parse_args(argv)
+    return args
 
-    INPUTS:
-    fits_filename : str
-        Path to the FITS file to be checked and potentially modified.
-
-    RETURNS:
-    None
-        The function modifies the FITS file in place if the axes need to be swapped.
-    """
-    with fits.open(fits_filename, mode='update') as hdul:
-        hdr = hdul[0].header
-        data = hdul[0].data
-
-        if data.ndim < 4:
-            raise ValueError("FITS file has only {data.ndim} axes, expected at least four axes.")
-
-        # Check the CTYPE of axes
-        ctype3 = hdr.get('CTYPE3', '').strip()
-        ctype4 = hdr.get('CTYPE4', '').strip()
-
-        if ctype3 == 'FREQ' and ctype4 == 'STOKES':
-            # Axes are correct, no changes needed
-            return
-        elif ctype3 == 'STOKES' and ctype4 == 'FREQ':
-            logging.info(f"Swapping 3rd and 4th axis of {fits_filename} to achieve RA,DEC,FREQ,STOKES")
-            # Swap the axes and update the header and data
-            data = np.swapaxes(data, 1, 0)  # Swap the 4th and 3rd axes (considering reversed shape)
-
-            # Update header options
-            header_options = ['CTYPE', 'CRVAL', 'CDELT', 'CRPIX', 'CUNIT']
-            for option in header_options:
-                hdr[f'{option}3'], hdr[f'{option}4'] = hdr[f'{option}4'], hdr[f'{option}3']
-
-            # Overwrite the data and header in the FITS file
-            hdul[0].data = data
-            hdul.flush()  # Save changes to the file
 
 def main(argv):
     """Run with the following command:
@@ -291,154 +222,126 @@ def main(argv):
             -o <output_dir>
             -t <template>
 
-    Optional arguments
-
+    Optional arguments:
         -n naxis        Naxis for tiling (default 2048)
         -p prefix       Output tile filename prefix (default "PoSSUM")
 
     """
     args = parse_args(argv)
-
-    # Check files exist for image cube, tiling map and tile template
-    image = args.cube
-    if not os.path.exists(image):
-        raise Exception(f"Input image {image} not found.")
+    obs_id = args.obs_id
+    image_cube = args.cube
     tiling_map = args.map
-    if not os.path.exists(tiling_map):
-        raise Exception(f"Input sky tiling map {tiling_map} not found.")
+    output_dir = args.output
     tile_template = args.template
-    if not os.path.exists(tile_template):
-        raise Exception(f"Input tile template {tile_template} not found.")
-
-    # Output directories
-    prefix = args.prefix
-    #if not os.path.exists(args.output):
-    try:
-        logging.info(f"Output directory not found. Creating new directory: {args.output}")
-        os.makedirs(args.output)
-    except FileExistsError:
-        pass
-
-    write_dir = args.output
-    #if not os.path.exists(write_dir):
-    try:
-        logging.info(f"Output subdirectory not found. Creating new directory: {write_dir}")
-        os.makedirs(write_dir)
-    except FileExistsError:
-        pass
-
     naxis = args.naxis
+    prefix = args.prefix
+
+    # Check files exist for image cube, tiling map, and tile template
+    assert os.path.exists(image_cube), f'Input image {image_cube} not found.'
+    assert os.path.exists(tiling_map), f'Input sky tiling map {tiling_map} not found.'
+    assert os.path.exists(tile_template), f'Input tile template {tile_template} not found.'
+
+    # Create output directories if they do not exist
+    if not os.path.exists(output_dir):
+        logging.info(f'Output directory not found. Creating new directory: {output_dir}')
+        os.makedirs(output_dir)
 
     # Read tiling map
-    pixel_ID = []
+    pixel_ids = []
     crpix1 = []
     crpix2 = []
-    with open(tiling_map, mode="r") as f:
+    with open(tiling_map, mode='r') as f:
         csv_reader = csv.DictReader(f)
         for row in csv_reader:
-            pixel_ID.append(float(row["PIXELS"]))
-            crpix1.append(float(row["CRPIX_RA"]))
-            crpix2.append(float(row["CRPIX_DEC"]))
+            pixel_ids.append(float(row['PIXELS']))
+            crpix1.append(float(row['CRPIX_RA']))
+            crpix2.append(float(row['CRPIX_DEC']))
 
-    logging.info("Getting header")
-    fitsheader = imhead(image)
-    axis = fitsheader["axisnames"]
+    # Read input image cube header
+    logging.info('Getting header')
+    fitsheader = imhead(image_cube)
+    axis = fitsheader['axisnames']
     logging.info(axis)
 
     # Read tile template header
-    logging.info("Getting regridding template")
-    template_header = imregrid(imagename=tile_template, template="get", overwrite=True)
+    logging.info('Getting regridding template')
+    template_header = imregrid(imagename=tile_template, template='get', overwrite=True)
 
-    # Starting the tiling.
-    logging.info("CASA tiling")
-    start_tiling = time.time()
+    # Starting the tiling
+    logging.info('CASA tiling')
+    start = time.time()
     for i, (ra, dec) in enumerate(zip(crpix1, crpix2)):
-        logging.info(f"Regridding tile {i+1}/{len(crpix1)}")
-        one_tile_start = time.time()
+        pixel_id = pixel_ids[i]
+        logging.info(f'Regridding tile {pixel_id} ({i+1} / {len(crpix1)})')
+        inner_start = time.time()
 
         # Update the template header dictionary from / for imregrid
         template_header["csys"]["direction0"]["crpix"] = np.array([ra, dec])
-        output_filename = "%s_%s-%d.image" % (prefix, args.obs_id, pixel_ID[i])
-        output_name = os.path.join(write_dir, output_filename)
-        fitsimage = output_name.split(".image")[0] + ".fits"
+        output_filename = "%s_%s-%d.image" % (prefix, obs_id, pixel_id)
+        casa_image = os.path.join(output_dir, output_filename)
+        fits_image = casa_image.split(".image")[0] + ".fits"
 
-        ##############
-        # below lines added by Erik to
-        # check if there are any non-NaN pixels in the tile region
-        r = tileID_to_region(pixel_ID[i])
-        masked_data = mask_regions(image, r, maskoutside=True)
-        # if there are only NaN pixels, we don't need to make this tile from the current observation
-        # we can simply create a tile with all-NaN in case it needs to be combined with different freqs
+        # Check if the tile is all NaN values
+        # NOTE: If only NaN pixels for this observation, create NaN tile rather than running CASA tiling.
+        region = tile_id_to_region(pixel_id, nside=32)
+        masked_data = mask_regions(image_cube, region, mask_outside=True)
         if np.isnan(masked_data).all():
-            logging.warning("WARNING: Tile is outside the observation. If this is the case for all frequencies, then the tile does not actually require this observation.")
-            # todo: check/log this somehow? It would verify the radius needed for the tile
-            logging.info(f"Creating NaN tile {fitsimage}")
-            create_nan_tile(image, tile_template, template_header["csys"]["direction0"]["crpix"], fitsimage, overwrite=True)
-        ##############
+            # TODO: Check/log this somehow? It would verify the radius needed for the tile
+            logging.warning('Tile is outside the observation across all frequencies. Data contains all NaN values.')
+            logging.info(f"Creating NaN tile {fits_image}")
+            create_nan_tile(image_cube, tile_template, template_header["csys"]["direction0"]["crpix"], fits_image, overwrite=True)
+            continue
 
-        else: # if there are finite value pixels, proceed as before
-            try:
-                if len(axis) == 4:
-                    fourth_axis = axis[3]
-                    if fourth_axis == "Frequency":
-                        number_of_frequency = fitsheader["shape"][3]
-                        template_header["shap"] = np.array(
-                            [naxis, naxis, 1, number_of_frequency])
+        # Update template header
+        if len(axis) == 4:
+            fourth_axis = axis[3]
+            if fourth_axis == "Frequency":
+                number_of_frequency = fitsheader["shape"][3]
+                template_header["shap"] = np.array(
+                    [naxis, naxis, 1, number_of_frequency])
+            third_axis = axis[2]
+            if third_axis == "Frequency":
+                number_of_frequency = fitsheader["shape"][2]
+                template_header["shap"] = np.array(
+                    [naxis, naxis, number_of_frequency, 1])
+        if len(axis) == 3:
+            third_axis = axis[2]
+            if third_axis == "Frequency":
+                number_of_frequency = fitsheader["shape"][2]
+                template_header["shap"] = np.array(
+                    [naxis, naxis, number_of_frequency])
+            else:
+                template_header["shap"] = np.array([naxis, naxis, 1])
 
-                    third_axis = axis[2]
-                    if third_axis == "Frequency":
-                        number_of_frequency = fitsheader["shape"][2]
-                        template_header["shap"] = np.array(
-                            [naxis, naxis, number_of_frequency, 1])
+        # NOTE: CRPIX1 CRPIX2 correction for CASA tiling error
+        template_header["csys"]["direction0"]["crpix"] = np.array([ra - 1.0, dec - 1.0])
 
-                if len(axis) == 3:
-                    third_axis = axis[2]
-                    if third_axis == "Frequency":
-                        number_of_frequency = fitsheader["shape"][2]
-                        template_header["shap"] = np.array(
-                            [naxis, naxis, number_of_frequency])
-                    else:
-                        template_header["shap"] = np.array([naxis, naxis, 1])
+        # Tiling to CASA image
+        logging.debug('Performing CASA tiling')
+        imregrid(
+            imagename=image_cube,
+            template=template_header,
+            output=casa_image,
+            axes=[0, 1],
+            interpolation="cubic",
+            overwrite=True
+        )
 
-                # tiling, outputs tile fits in CASA image.
-                imregrid(
-                    imagename=image,
-                    template=template_header,
-                    output=output_name,
-                    axes=[0, 1],
-                    interpolation="cubic",
-                    overwrite=True,)
+        # Convert CASA image to fits image
+        logging.debug('Converting CASA image to fits image')
+        exportfits(
+            imagename=casa_image,
+            fitsimage=fits_image,
+            overwrite=True,
+            stokeslast=False
+        )
 
-                # convert casa image to fits image
-                one_tile_end = time.time()
-                logging.info(
-                    "Tiling of pixel ID %d completed. Time elapsed %.3f seconds. "
-                    % (pixel_ID[i], (one_tile_end - one_tile_start)))
+        # Cleanup CASA image
+        logging.debug('Deleting CASA image')
+        os.system(f"rm -rf {casa_image}")
+        logging.info('Tiling pixel %d completed in %.3f s' % (pixel_id, (time.time() - inner_start)))
 
-                logging.info("Converting the casa image to fits image.")
-                exportfits(
-                    imagename=output_name,
-                    fitsimage=fitsimage,
-                    overwrite=True,
-                    stokeslast=False
-                )
-
-                # delete all casa image files.
-                logging.info("Deleting the casa image. ")
-                os.system("rm -rf %s" % output_name)
-            except Exception as e:
-                logging.error(f"There was an exception: {e}")
-                logging.info(f"Skipping tile {fitsimage}")
-                continue
-                # TODO: need to update csv file
-
-        # Finally, check the axes ordering of the tiled image. Enforce RA,DEC,FREQ,STOKES
-        check_and_swap_fits_axes(fitsimage)
-
-    end_tiling = time.time()
-    logging.info(
-        "Tiling for observation %s completed. Time elapsed is %.3f seconds."
-        % (args.obs_id, (end_tiling - start_tiling)))
+    logging.info('Tiling for observation %s completed. Time elapsed is %.3f seconds.' % (obs_id, (time.time() - start)))
 
 
 if __name__ == "__main__":
