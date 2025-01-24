@@ -10,6 +10,7 @@ All changes to the Docker image `docker://aussrc/hpx_tiles` will be documented i
 - `BMAJ` and `BMIN` added to template header where appropriate (with try-catch)
 - Assume default axis ordering (ra, dec, pol, freq) in cubes prior to mosaicking. Reverting all changes to flip pol and freq. Preferred axis order will be applied at the mosaicking stage of the workflow.
 - Move `repair_incomplete_tiles.py` from AusSRC metadata image into this repository and `hpx_tiles` image
+- Cleanup archived scripts in subdirectory (codes no longer used in main pipeline)
 
 ## [v1.0.0]
 
