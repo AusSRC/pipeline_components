@@ -1,42 +1,27 @@
-# HPX Tiles
+# HPX tiles
 
-Scripts required for performing HEALPIX tiling of spectral line cubes.
+Code required for performing HEALPIX tiling of spectral line cubes.
 
-Diagram below summarises the tiling workflow.
+## Scripts
 
-```mermaid
-    graph TD;
-    footprint_file-->A{generate_tile_pixel_map};
-    healpix_configuration-->A{generate_tile_pixel_map};
-    image_cube-->B{casa_tiling};
-    A{generate_tile_pixel_map}-- hpx_pixel_map -->B{casa_tiling};
-    A{generate_tile_pixel_map}-- obs_id -->B{casa_tiling};
-    tile_template-->B{casa_tiling};
-    B{casa_tiling}-- tiles -->C{tiling_components};
-    tile_map-->C{tiling_components}
+| File | Description |
+| --- | --- |
+| [casa_tiling.py](casa_tiling.py) |  TBA |
+| [generate_tile_pixel_map.py](generate_tile_pixel_map.py) |  TBA |
+| [repair_incomplete_tiles.py](repair_incomplete_tiles.py) |  TBA |
+| ... | ... |
+
+## Config
+
+Default `NAXIS=2048`
+
+HPX mapping config defaults are provided in config subfolder for ASKAP [band 1](config/hpx_tile_config_band1.json) and [band 2](config/hpx_tile_config_band2.json) observations.
+
+## CASA
+
+We fix the version of Python CASA in the `hpx_tiles` container to ensure the tiling works with the code that we have written. There are some minor modifications (`-1` to `CRPIX1` and `CRPIX2` in header) that are required for the current version of CASA that we are using. These may break if a different version of python casa is used.
+
 ```
-
-## Generate tile pixel map
-
-For every observation provide the footprint file from the POSSUM evaluation files. Recommended default configuration
-
+casatools==6.5.2.26
+casatasks==6.5.2.26
 ```
-{
-  "nside": 32,
-  "tile_naxis": 2048,
-  "tile_cdelt": 0.0009710633897,
-  "beam_radius": 1.2,
-  "beam_sample_points": 16,
-  "number_of_beams": 36
-}
-```
-
-## CASA tiling
-
-Run the tiling with CASA on the image cubes.
-
-Assumed `naxis = 2048` unless otherwise provided as an argument. Should get this from the healpix configuration used to generate tile pixel maps.
-
-## Tile components
-
-Determine when a HPX tile is complete (all component observations are completed).
