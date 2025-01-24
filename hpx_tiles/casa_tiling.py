@@ -132,9 +132,12 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile, overwr
             assert "STOKES" in hdul_t[0].header['CTYPE3'], "template fits file should have axis order RA,DEC,STOKES,FREQ"
             assert "FREQ" in hdul_t[0].header['CTYPE4'], "template fits file should have axis order RA,DEC,STOKES,FREQ"
 
-            # Update BMAJ and BMIN in header
-            hdul_t[0].header["BMAJ"] = hdul_o[0].header["BMAJ"]
-            hdul_t[0].header["BMIN"] = hdul_o[0].header["BMIN"]
+            # Update BMAJ and BMIN in header where appropriate
+            try:
+                hdul_t[0].header["BMAJ"] = hdul_o[0].header["BMAJ"]
+                hdul_t[0].header["BMIN"] = hdul_o[0].header["BMIN"]
+            except Exception as e:
+                logging.warning(f'Update BMAJ and BMIN in header failed: {e}')
 
             # which leads to assumption that last two axes in numpy array are DEC, RA
             shape_o = hdul_o[0].data.shape[:-2]
@@ -314,6 +317,9 @@ def main(argv):
                 template_header["shap"] = np.array([naxis, naxis, 1])
 
         # NOTE: CRPIX1 CRPIX2 correction for CASA tiling error
+        # NOTE: The versions of CASA below are required for this correction to work correctly
+        # casatools==6.5.2.26
+        # casatasks==6.5.2.26
         template_header["csys"]["direction0"]["crpix"] = np.array([ra - 1.0, dec - 1.0])
 
         # Tiling to CASA image

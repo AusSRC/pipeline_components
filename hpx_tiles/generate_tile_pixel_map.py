@@ -79,7 +79,6 @@ def points_within_circle(x0, y0, radius, num_points=4):
         ra_corners = []
         dec_corners = []
         for (x_0, y_0) in zip(x0, y0):
-
             declination = radius * numpy.sin(angle) + y_0
             dec_corners.append( declination )
             ra_corners.append( (radius * numpy.cos(angle))/numpy.cos(numpy.deg2rad(declination)) + x_0 )
@@ -196,12 +195,8 @@ def reference_header(naxis, cdelt):
     hdr += "NAXIS2  =                %d / length of data axis 2 \n" % naxis
     hdr += "EXTEND  =                    F / No FITS extensions are present \n"
     # NOTE: update adding 0.5 to CRPIX 1/2 to fix [2049, 2049, X, X] shape error
-    hdr += "CRPIX1  =             %r / Coordinate reference pixel \n" % (
-        (naxis / 2.0) + 0.5
-    )
-    hdr += "CRPIX2  =             %r / Coordinate reference pixel \n" % (
-        (naxis / 2.0) + 0.5
-    )
+    hdr += "CRPIX1  =             %r / Coordinate reference pixel \n" % ((naxis / 2.0) + 0.5)
+    hdr += "CRPIX2  =             %r / Coordinate reference pixel \n" % ((naxis / 2.0) + 0.5)
     hdr += "PC1_1   =           0.70710677 / Transformation matrix element \n"
     hdr += "PC1_2   =           0.70710677 / Transformation matrix element \n"
     hdr += "PC2_1   =           -0.70710677 / Transformation matrix element \n"
@@ -220,35 +215,28 @@ def reference_header(naxis, cdelt):
     return hdr
 
 
-def HPX_in_degrees(HPX, HPX_wcs):
+def tile_number_to_tile_parameters(Nside, hpx_ids, tile_size, hpx_wcs):
+    """Determine the cutout parameters (CRPIX1, CRPIX2) for
+    a POSSUM tile (an HPX pixel of order 32).
+
+    Returns CRPIX1, CRPIX2, CRVAL1, CRVAL2 (tuple of 4 floats)
     """
-    Determines HealPix pixel
-    reference center coordinates.
-    """
+    CRPIX1 = []
+    CRPIX2 = []
+    CRVAL1 = []
+    CRVAL2 = []
 
-    hpx_ra, hpx_dec = [], []
-    crpix_ra, crpix_dec = [], []
+    for hpx_tile_num in hpx_ids:
+        lon, lat = hp.healpix_to_lonlat(hpx_tile_num) * u.deg
+        x, y = hpx_wcs.wcs_world2pix(lon, lat, 0)
 
-    for SBs_pixels in HPX:
+        # NOTE: required correction for all edge tiling for all packages
+        CRPIX1.append(numpy.round(-1 * x + tile_size, 5).astype('float'))
+        CRPIX2.append(numpy.round(-1 * y + tile_size, 5).astype('float'))
+        CRVAL1.append(lon.value)
+        CRVAL2.append(lat.value)
 
-        SBs_pixels_shift = SBs_pixels + [1]
-        # somehow the HPX are offset by 1 pixel. But the pixel ID and RA/DEC deg are okay. Just the ref pix.
-
-        hpx2lon = hp.healpix_to_lonlat(SBs_pixels) * u.deg
-        hpx2lon_shift = hp.healpix_to_lonlat(SBs_pixels_shift) * u.deg
-
-        HPX_RA, HPX_DEC = hpx2lon.value
-        HPX_RA_shift, HPX_DEC_shift = hpx2lon_shift.value
-
-        crpix_RA, crpix_DEC = HPX_wcs.wcs_world2pix(HPX_RA_shift, HPX_DEC_shift, 0)
-
-        crpix_ra.append(-crpix_RA)
-        crpix_dec.append(-crpix_DEC)
-
-        hpx_ra.append(HPX_RA)
-        hpx_dec.append(HPX_DEC)
-
-    return crpix_ra, crpix_dec, hpx_ra, hpx_dec
+    return CRPIX1, CRPIX2, CRVAL1, CRVAL2
 
 
 def parse_args(argv):
@@ -356,7 +344,12 @@ def main(argv):
     HPX_hdr = reference_header(naxis=naxis, cdelt=cdelt)
     HPX_hdr = fits.Header.fromstring("""%s""" % HPX_hdr, sep="\n")
     HPX_wcs = WCS(HPX_hdr)
-    crpix_ra, crpix_dec, hpx_ra, hpx_dec = HPX_in_degrees(hpx_pixels, HPX_wcs)
+    crpix_ra, crpix_dec, hpx_ra, hpx_dec = tile_number_to_tile_parameters(
+        Nside=nside,
+        hpx_ids=hpx_pixels,
+        tile_size=naxis,
+        hpx_wcs=HPX_wcs
+    )
 
     # TODO: loop not necessary
     # iterate over pixels to write pixel map
