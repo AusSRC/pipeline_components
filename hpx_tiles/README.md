@@ -13,13 +13,6 @@ Code required for performing HEALPIX tiling of spectral line cubes, and generati
 | [generate_tile_pixel_map.py](generate_tile_pixel_map.py) |  Generate CSV file with mapping from observations to HPX tiles | `hpx_tile_map.nf` |
 | [split_cube.py](split_cube.py) | Split image cube into N subcubes along frequency axis | `convolution.nf` |
 
-### Archive
-
-| File | Description | Order |
-| --- | --- | --- |
-| [fits_md5.py](fits_md5.py) |  TBA |  |
-| [rename_tiles.py](rename_tiles.py) |  TBA |  |
-
 ## Config
 
 Default `NAXIS=2048`
