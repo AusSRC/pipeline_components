@@ -28,7 +28,6 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.visualization import PercentileInterval
 from astroquery.skyview import SkyView
-from retrying_async import retry
 
 
 warnings.filterwarnings("ignore")
@@ -47,7 +46,6 @@ def get_aspect(ax):
     return disp_ratio
 
 
-@retry(attempts=10, delay=5)
 async def summary_plot(pool, detection):
     loop = asyncio.get_running_loop()
 
