@@ -247,7 +247,7 @@ def main(argv):
     # Create output directories if they do not exist
     if not os.path.exists(output_dir):
         logging.info(f'Output directory not found. Creating new directory: {output_dir}')
-        os.makedirs(output_dir)
+        os.makedirs(output_dir, exist_ok=True)
 
     # Read tiling map
     pixel_ids = []
@@ -348,6 +348,7 @@ def main(argv):
         logging.info('Tiling pixel %d completed in %.3f s' % (pixel_id, (time.time() - inner_start)))
 
     logging.info('Tiling for observation %s completed. Time elapsed is %.3f seconds.' % (obs_id, (time.time() - start)))
+    return
 
 
 if __name__ == "__main__":

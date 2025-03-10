@@ -280,7 +280,7 @@ def main(argv):
 
     #if not os.path.exists(args.output):
     try:
-        os.makedirs(args.output)
+        os.makedirs(args.output, exist_ok=True)
     except FileExistsError:
         pass
 

@@ -51,7 +51,7 @@ def main(argv):
 
     output_dir = args.output
     try:
-        os.makedirs(output_dir)
+        os.makedirs(output_dir, exist_ok=True)
     except FileExistsError:
         pass
 

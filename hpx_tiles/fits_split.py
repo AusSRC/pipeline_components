@@ -27,10 +27,10 @@ def split_number(num, n):
 
     # Calculate the size of each part
     size = num // n
-    
+
     # Calculate the remainder
     remainder = num % n
-    
+
     # Create the parts
     parts = []
     lower_bound = 0
@@ -40,13 +40,13 @@ def split_number(num, n):
             upper_bound = lower_bound + size
         else:
             upper_bound = lower_bound + size - 1
-        
+
         # Add the range to the parts list
         parts.append((lower_bound, upper_bound))
-        
+
         # Update the lower bound
         lower_bound = upper_bound + 1
-        
+
     return parts
 
 
@@ -88,7 +88,7 @@ def split_fits(infile, outpath, part):
     abs_outpath = os.path.abspath(outpath)
 
     try:
-        os.makedirs(abs_outpath)
+        os.makedirs(abs_outpath, exist_ok=True)
     except FileExistsError:
         pass
 
@@ -112,11 +112,11 @@ def split_fits(infile, outpath, part):
 
     with open(out_filename, 'wb') as obj:
         obj.write(header_bytes)
-        
+
         with open(infile, 'rb') as in_obj:
             in_obj.seek(header_size + (lower * image_size))
             count = 0
-            for i in range(lower, upper+1):                
+            for i in range(lower, upper+1):
                 count += 1
                 image_bytes = in_obj.read(image_size)
                 if not image_bytes:
