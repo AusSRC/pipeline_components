@@ -274,7 +274,7 @@ def main(argv):
     logging.info('CASA tiling')
     start = time.time()
     for i, (ra, dec) in enumerate(zip(crpix1, crpix2)):
-        pixel_id = pixel_ids[i]
+        pixel_id = int(pixel_ids[i])
         logging.info(f'Regridding tile {pixel_id} ({i+1} / {len(crpix1)})')
         inner_start = time.time()
 
@@ -295,57 +295,63 @@ def main(argv):
             create_nan_tile(image_cube, tile_template, template_header["csys"]["direction0"]["crpix"], fits_image, overwrite=True)
             continue
 
-        # Update template header
-        if len(axis) == 4:
-            fourth_axis = axis[3]
-            if fourth_axis == "Frequency":
-                number_of_frequency = fitsheader["shape"][3]
-                template_header["shap"] = np.array(
-                    [naxis, naxis, 1, number_of_frequency])
-            third_axis = axis[2]
-            if third_axis == "Frequency":
-                number_of_frequency = fitsheader["shape"][2]
-                template_header["shap"] = np.array(
-                    [naxis, naxis, number_of_frequency, 1])
-        if len(axis) == 3:
-            third_axis = axis[2]
-            if third_axis == "Frequency":
-                number_of_frequency = fitsheader["shape"][2]
-                template_header["shap"] = np.array(
-                    [naxis, naxis, number_of_frequency])
-            else:
-                template_header["shap"] = np.array([naxis, naxis, 1])
+        try:
+            # Update template header
+            if len(axis) == 4:
+                fourth_axis = axis[3]
+                if fourth_axis == "Frequency":
+                    number_of_frequency = fitsheader["shape"][3]
+                    template_header["shap"] = np.array(
+                        [naxis, naxis, 1, number_of_frequency])
+                third_axis = axis[2]
+                if third_axis == "Frequency":
+                    number_of_frequency = fitsheader["shape"][2]
+                    template_header["shap"] = np.array(
+                        [naxis, naxis, number_of_frequency, 1])
+            if len(axis) == 3:
+                third_axis = axis[2]
+                if third_axis == "Frequency":
+                    number_of_frequency = fitsheader["shape"][2]
+                    template_header["shap"] = np.array(
+                        [naxis, naxis, number_of_frequency])
+                else:
+                    template_header["shap"] = np.array([naxis, naxis, 1])
 
-        # NOTE: CRPIX1 CRPIX2 correction for CASA tiling error
-        # NOTE: The versions of CASA below are required for this correction to work correctly
-        # casatools==6.5.2.26
-        # casatasks==6.5.2.26
-        template_header["csys"]["direction0"]["crpix"] = np.array([ra - 1.0, dec - 1.0])
+            # NOTE: CRPIX1 CRPIX2 correction for CASA tiling error
+            # NOTE: The versions of CASA below are required for this correction to work correctly
+            # casatools==6.5.2.26
+            # casatasks==6.5.2.26
+            template_header["csys"]["direction0"]["crpix"] = np.array([ra - 1.0, dec - 1.0])
 
-        # Tiling to CASA image
-        logging.debug('Performing CASA tiling')
-        imregrid(
-            imagename=image_cube,
-            template=template_header,
-            output=casa_image,
-            axes=[0, 1],
-            interpolation="cubic",
-            overwrite=True
-        )
+            # Tiling to CASA image
+            logging.debug('Performing CASA tiling')
+            imregrid(
+                imagename=image_cube,
+                template=template_header,
+                output=casa_image,
+                axes=[0, 1],
+                interpolation="cubic",
+                overwrite=True
+            )
 
-        # Convert CASA image to fits image
-        logging.debug('Converting CASA image to fits image')
-        exportfits(
-            imagename=casa_image,
-            fitsimage=fits_image,
-            overwrite=True,
-            stokeslast=False
-        )
+            # Convert CASA image to fits image
+            logging.debug('Converting CASA image to fits image')
+            exportfits(
+                imagename=casa_image,
+                fitsimage=fits_image,
+                overwrite=True,
+                stokeslast=False
+            )
 
-        # Cleanup CASA image
-        logging.debug('Deleting CASA image')
-        os.system(f"rm -rf {casa_image}")
-        logging.info('Tiling pixel %d completed in %.3f s' % (pixel_id, (time.time() - inner_start)))
+            # Cleanup CASA image
+            logging.debug('Deleting CASA image')
+            os.system(f"rm -rf {casa_image}")
+            logging.info('Tiling pixel %d completed in %.3f s' % (pixel_id, (time.time() - inner_start)))
+
+        except Exception as e:
+            logging.error(f'Error tiling {pixel_id} for observation {obs_id}. Generating NaN tile')
+            logging.error(f'Error message: {e}')
+            create_nan_tile(image_cube, tile_template, template_header["csys"]["direction0"]["crpix"], fits_image, overwrite=True)
 
     logging.info('Tiling for observation %s completed. Time elapsed is %.3f seconds.' % (obs_id, (time.time() - start)))
     return
