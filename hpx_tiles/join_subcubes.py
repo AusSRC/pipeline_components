@@ -91,6 +91,11 @@ def main(argv):
                 data = np.concatenate((data, hdul[0].data), axis=axis)
             logging.info(f"Output data shape: {data.shape}")
 
+    # Cast CRPIX in header to float
+    for idx in range(naxis):
+        card = str(header[f'CRPIX{str(idx+1)}']).strip()
+        header[card] = float(header[card])
+
     hdu = fits.PrimaryHDU(header=header, data=data)
     hdu.writeto(args.output, overwrite=args.overwrite)
 
