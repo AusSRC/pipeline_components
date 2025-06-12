@@ -91,12 +91,15 @@ def main(argv):
                 data = np.concatenate((data, hdul[0].data), axis=axis)
             logging.info(f"Output data shape: {data.shape}")
 
-    # Cast CRPIX in header to float
+    # Cast certain header card values to float
+    write_header = header.copy()
+    prefixes = ['CRPIX', 'CRVAL', 'CDELT']
     for idx in range(naxis):
-        card = str(header[f'CRPIX{str(idx+1)}']).strip()
-        header[card] = float(header[card])
+        for prefix in prefixes:
+            card = f'{prefix}{str(idx+1)}'
+            write_header.set(card, float(write_header[card]))
 
-    hdu = fits.PrimaryHDU(header=header, data=data)
+    hdu = fits.PrimaryHDU(header=write_header, data=data)
     hdu.writeto(args.output, overwrite=args.overwrite)
 
 
