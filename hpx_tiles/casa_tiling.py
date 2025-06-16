@@ -114,15 +114,6 @@ def create_nan_tile(original_image, template_fits, crpix1_and_2, outfile, overwr
             if naxis_original != naxis_template:
                 raise ValueError(f"Please provide template file with same naxis as input cube. Currently its {naxis_template} vs {naxis_original}")
 
-            # Also check whether the template file has the same axes CTYPEs as the original input cube.
-            # for i in range(naxis_original):
-            #     # If not, then it's not a good template file
-            #     ctype_o = hdul_o[0].header[f"CTYPE{i+1}"]
-            #     ctype_t = hdul_t[0].header[f"CTYPE{i+1}"]
-            #     if ctype_o[:2] != ctype_t[:2]: # checking first two characters should be good enough.
-            #                                   # Because different "RA" and "DEC" projections should be fine.
-            #         raise ValueError(f"CTYPE{i+1} is {ctype_o} in original image but {ctype_t} in template fits")
-
             # Check assumption that first two axes in the header are RA DEC
             assert "RA" in hdul_t[0].header["CTYPE1"], f"Expected RA in template.fits first axis, got {hdul_t[0].header['CTYPE1']}"
             assert "DEC" in hdul_t[0].header["CTYPE2"], f"Expected DEC in template.fits second axis, got {hdul_t[0].header['CTYPE2']}"
@@ -283,17 +274,6 @@ def main(argv):
         output_filename = "%s_%s-%d.image" % (prefix, obs_id, pixel_id)
         casa_image = os.path.join(output_dir, output_filename)
         fits_image = casa_image.split(".image")[0] + ".fits"
-
-        # Check if the tile is all NaN values
-        # NOTE: If only NaN pixels for this observation, create NaN tile rather than running CASA tiling.
-        region = tile_id_to_region(pixel_id, nside=32)
-        masked_data = mask_regions(image_cube, region, mask_outside=True)
-        if np.isnan(masked_data).all():
-            # TODO: Check/log this somehow? It would verify the radius needed for the tile
-            logging.warning('Tile is outside the observation across all frequencies. Data contains all NaN values.')
-            logging.info(f"Creating NaN tile {fits_image}")
-            create_nan_tile(image_cube, tile_template, template_header["csys"]["direction0"]["crpix"], fits_image, overwrite=True)
-            continue
 
         try:
             # Update template header
