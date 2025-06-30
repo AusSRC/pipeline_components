@@ -1,7 +1,8 @@
 astropy
-astroquery==0.4.6
+astroquery
 asyncpg
 python-dotenv
 packaging
 pyvo
 jinja2
+keyrings.alt

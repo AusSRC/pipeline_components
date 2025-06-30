@@ -9,6 +9,7 @@ import asyncio
 import argparse
 import astropy
 import configparser
+import keyring
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
 import concurrent.futures
@@ -21,7 +22,9 @@ logging.basicConfig(stream=sys.stdout,
 astropy.utils.iers.conf.auto_download = False
 
 
+KEYRING_SERVICE = 'astroquery:casda.csiro.au'
 URL = "https://casda.csiro.au/casda_vo_tools/tap"
+
 
 WALLABY_QUERY = (
     "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND "
@@ -145,8 +148,10 @@ def tap_query(project, sbid):
     return res
 
 
-def download_file(url, check_exists, output, timeout, buffer=4194304):
-    # Large timeout is necessary as the file may need to be stage from tape
+def download_file(url, check_exists, output, timeout, buffer=4194304, retry=5):
+    """Large timeout is necessary as the file may need to be stage from tape
+    Introducing retry to catch errors with CASDA downloading.
+    """
     logging.info(f"Requesting: URL: {url} Timeout: {timeout}")
 
     try:
@@ -157,37 +162,44 @@ def download_file(url, check_exists, output, timeout, buffer=4194304):
     if url is None:
         raise ValueError('URL is empty')
 
-    with urllib.request.urlopen(url, timeout=timeout) as r:
-        filename = r.info().get_filename()
-        filepath = f"{output}/{filename}"
-        http_size = int(r.info()['Content-Length'])
-        if check_exists:
-            try:
-                file_size = os.path.getsize(filepath)
-                if file_size == http_size:
-                    logging.info(f"File exists, ignoring: {os.path.basename(filepath)}")
-                    # File exists and is same size; do nothing
-                    return filepath
-            except FileNotFoundError:
-                pass
+    tries = 0
+    while tries <= retry:
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r:
+                filename = r.info().get_filename()
+                filepath = f"{output}/{filename}"
+                http_size = int(r.info()['Content-Length'])
 
-        logging.info(f"Downloading: {filepath} size: {http_size}")
-        count = 0
-        with open(filepath, 'wb') as o:
-            while http_size > count:
-                buff = r.read(buffer)
-                if not buff:
-                    break
-                o.write(buff)
-                count += len(buff)
+                if check_exists:
+                    try:
+                        file_size = os.path.getsize(filepath)
+                        if file_size == http_size:
+                            logging.info(f"File exists, ignoring: {os.path.basename(filepath)}")
+                            # File exists and is same size; do nothing
+                            return filepath
+                    except FileNotFoundError:
+                        pass
 
-        download_size = os.path.getsize(filepath)
-        if http_size != download_size:
-            raise ValueError(f"File size does not match file {download_size} and http {http_size}")
+                logging.info(f"Downloading: {filepath} size: {http_size}")
+                count = 0
+                with open(filepath, 'wb') as o:
+                    while http_size > count:
+                        buff = r.read(buffer)
+                        if not buff:
+                            break
+                        o.write(buff)
+                        count += len(buff)
 
-        logging.info(f"Download complete: {os.path.basename(filepath)}")
+                download_size = os.path.getsize(filepath)
+                if http_size != download_size:
+                    raise ValueError(f"File size does not match file {download_size} and http {http_size}")
 
-        return filepath
+                logging.info(f"Download complete: {os.path.basename(filepath)}")
+                return filepath
+        except:
+            tries += 1
+            logging.info(f'Download error. Retry number {tries}')
+    raise Exception(f'Download retried {retry} times with each failing.')
 
 
 async def main(argv):
@@ -202,11 +214,13 @@ async def main(argv):
     # stage
     parser = configparser.ConfigParser()
     parser.read(args.credentials)
+    keyring.set_password(KEYRING_SERVICE, parser['CASDA']['username'], parser['CASDA']['password'])
     casda = Casda()
-    casda = Casda(parser["CASDA"]["username"], parser["CASDA"]["password"])
+    casda.login(username=parser["CASDA"]["username"])
     url_list = casda.stage_data(res, verbose=True)
     logging.info(f"CASDA download staged data URLs: {url_list}")
 
+    # download
     file_list = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         futures = []
@@ -218,14 +232,14 @@ async def main(argv):
         for future in concurrent.futures.as_completed(futures):
             file_list.append(future.result())
 
+    # write output manifest
     if args.manifest:
-        try:
-            os.makedirs(os.path.dirname(args.manifest))
-        except:
-            pass
-
+        directory = os.path.dirname(args.manifest)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         with open(args.manifest, "w") as outfile:
             outfile.write(json.dumps(file_list))
+            logging.info(f"Writing manifest complete: {args.manifest}")
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
