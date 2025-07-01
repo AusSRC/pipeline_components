@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 import logging
 import json
 import urllib
@@ -9,19 +10,21 @@ import asyncio
 import argparse
 import astropy
 import configparser
+import requests
 import keyring
+from keyrings.alt.file import PlaintextKeyring
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
 import concurrent.futures
 
 
-logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO,
-                    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
-
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s'
+)
 astropy.utils.iers.conf.auto_download = False
-
-
+keyring.set_keyring(PlaintextKeyring())
 KEYRING_SERVICE = 'astroquery:casda.csiro.au'
 URL = "https://casda.csiro.au/casda_vo_tools/tap"
 
@@ -148,47 +151,55 @@ def tap_query(project, sbid):
     return res
 
 
-def download_file(url, check_exists, output, timeout, buffer=4194304, retry=5):
-    """Large timeout is necessary as the file may need to be stage from tape
-    Introducing retry to catch errors with CASDA downloading.
+def download_file(url, check_exists, output, timeout, buffer=4*2**20, retry=3, sleep=5*60):
+    """Robust file download from CASDA.
+    Large timeout is necessary as the file may need to be stage from tape.
+    Introducing retry to resume download from bytes already downloaded.
+    Sleep between retries to allow for potential staging from tape issues).
     """
     logging.info(f"Requesting: URL: {url} Timeout: {timeout}")
-
-    try:
-        os.makedirs(output)
-    except:
-        pass
-
     if url is None:
         raise ValueError('URL is empty')
 
+    if not os.path.exists(output):
+        os.makedirs(output)
+
+    downloaded_bytes = 0
     tries = 0
     while tries <= retry:
         try:
-            with urllib.request.urlopen(url, timeout=timeout) as r:
-                filename = r.info().get_filename()
-                filepath = f"{output}/{filename}"
-                http_size = int(r.info()['Content-Length'])
+            req =  urllib.request.urlopen(url, timeout=timeout)
+            filename = req.info().get_filename()
+            filepath = f"{output}/{filename}"
+            http_size = int(req.info()['Content-Length'])
 
-                if check_exists:
-                    try:
-                        file_size = os.path.getsize(filepath)
-                        if file_size == http_size:
-                            logging.info(f"File exists, ignoring: {os.path.basename(filepath)}")
-                            # File exists and is same size; do nothing
-                            return filepath
-                    except FileNotFoundError:
-                        pass
+            # File exists and is same size; do nothing and return
+            if check_exists and os.path.exists(filepath) and os.path.getsize(filepath) == http_size:
+                logging.info(f"File exists and is same size as download content, ignoring: {os.path.basename(filepath)}")
+                return filepath
 
-                logging.info(f"Downloading: {filepath} size: {http_size}")
-                count = 0
-                with open(filepath, 'wb') as o:
-                    while http_size > count:
+            # Resume download from bytes already downloaded
+            if os.path.exists(filepath) and os.path.getsize(filepath) != http_size:
+                downloaded_bytes = os.path.getsize(filepath)
+                logging.info(f"Resuming download: {os.path.basename(filepath)} {downloaded_bytes} bytes")
+                headers = {'Range': f'bytes={downloaded_bytes}-'}
+                mode = 'ab'
+
+            # Starting download when there is no file
+            elif not os.path.exists(filepath):
+                logging.info(f"Starting download: {os.path.basename(filepath)}")
+                headers = {}
+                mode = 'wb'
+
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                with open(filepath, mode) as o:
+                    while True:
                         buff = r.read(buffer)
                         if not buff:
                             break
                         o.write(buff)
-                        count += len(buff)
+                        downloaded_bytes += len(buff)
 
                 download_size = os.path.getsize(filepath)
                 if http_size != download_size:
@@ -196,10 +207,13 @@ def download_file(url, check_exists, output, timeout, buffer=4194304, retry=5):
 
                 logging.info(f"Download complete: {os.path.basename(filepath)}")
                 return filepath
-        except:
+        except (OSError, ValueError) as e:
             tries += 1
-            logging.info(f'Download error. Retry number {tries}')
+            logging.info(f'Download error. Retry number {tries}. Error: {e}')
+            logging.info(f'Sleeping for 5 minutes before retrying.')
+            time.sleep(sleep)  # 5 minutes
     raise Exception(f'Download retried {retry} times with each failing.')
+    return None
 
 
 async def main(argv):
