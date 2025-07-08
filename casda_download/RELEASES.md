@@ -2,6 +2,11 @@
 
 All notable changes to the Docker image `docker://aussrc/casda_download` will be documented in this file.
 
+## [v1.0.2]
+
+- Added download evaluation files script
+- Moved download_files (with retry + resume from existing file) to a separate folder to be used in both download codes
+
 ## [v1.0.1]
 
 - Download from point of failure with retries for all files
