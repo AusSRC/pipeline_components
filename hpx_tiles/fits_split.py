@@ -98,6 +98,14 @@ def split_fits(infile, outpath, part):
     in_filename = os.path.basename(infile)
     out_filename = f"{abs_outpath}/split_{lower}-{upper}_{in_filename}"
 
+    # Check if output fits cube exists and channels match expected number
+    if os.path.exists(out_filename):
+        logger.info(f'Output file already exists at {out_filename}')
+        header = get_fits_header_bytes(out_filename)
+        if header['NAXIS4'] == (upper - lower) + 1
+            logger.info(f'Output file contains expected number of channels ({upper-lower+1}). Skipping.')
+            return
+
     logger.info(f"Creating {out_filename}")
 
     header = get_fits_header_bytes(infile)
