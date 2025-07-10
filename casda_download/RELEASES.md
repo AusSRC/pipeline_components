@@ -2,6 +2,10 @@
 
 All notable changes to the Docker image `docker://aussrc/casda_download` will be documented in this file.
 
+## [v1.0.3]
+
+- Logging exception (show traceback)
+
 ## [v1.0.2]
 
 - Added download evaluation files script
