@@ -275,6 +275,11 @@ def main(argv):
         casa_image = os.path.join(output_dir, output_filename)
         fits_image = casa_image.split(".image")[0] + ".fits"
 
+        # Continue if output already exists
+        if os.path.exists(fits_image):
+            logging.info(f'Output file already exists at {fits_image}. Skipping.')
+            continue
+
         try:
             # Update template header
             if len(axis) == 4:
