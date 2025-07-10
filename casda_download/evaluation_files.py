@@ -5,6 +5,7 @@ Download evaluation files from CASDA for a given SBID for ASKAP observations.
 Extract content of evaluation files to a specified path.
 """
 
+import os
 import sys
 import logging
 import requests
