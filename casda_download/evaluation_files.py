@@ -87,6 +87,10 @@ def main(argv):
     url_list = casda.stage_data(t)
     logging.info(f"Staging files {url_list}")
 
+    # Output directory ensure exists
+    if not os.path.exists(args.output):
+        os.makedirs(args.output)
+
     # multithreaded download
     file_list = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:

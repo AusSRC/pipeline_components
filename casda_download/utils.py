@@ -32,9 +32,6 @@ def download_files(url, output, timeout=3000, check_exists=True, buffer=4*2**20,
     if url is None:
         raise ValueError('URL is empty')
 
-    if not os.path.exists(output):
-        os.makedirs(output)
-
     downloaded_bytes = 0
     tries = 0
     while tries <= retry:
@@ -80,6 +77,7 @@ def download_files(url, output, timeout=3000, check_exists=True, buffer=4*2**20,
                 return filepath
         except (OSError, ValueError) as e:
             tries += 1
+            logging.exception(e)
             logging.info(f'Download error. Retry number {tries}. Error: {e}')
             logging.info(f'Sleeping for {sleep} seconds before retrying.')
             time.sleep(sleep)
