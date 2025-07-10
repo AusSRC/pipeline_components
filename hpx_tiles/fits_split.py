@@ -102,7 +102,7 @@ def split_fits(infile, outpath, part):
     if os.path.exists(out_filename):
         logger.info(f'Output file already exists at {out_filename}')
         header = get_fits_header_bytes(out_filename)
-        if header['NAXIS4'] == (upper - lower) + 1
+        if (header['NAXIS4'] == (upper - lower + 1)):
             logger.info(f'Output file contains expected number of channels ({upper-lower+1}). Skipping.')
             return
 
