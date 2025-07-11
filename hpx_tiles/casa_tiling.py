@@ -14,6 +14,7 @@ import sys
 import numpy as np
 import csv
 import time
+import math
 import argparse
 import logging
 from casatasks import imhead, imregrid, exportfits  # type: ignore
@@ -25,6 +26,8 @@ from astropy_healpix import HEALPix
 from astropy.coordinates import SkyCoord
 
 
+HDU_CARDS_IN_BLOCK = 36  # 2880/80
+FITS_BLOCK = 2880
 logging.basicConfig(level=logging.INFO)
 
 
@@ -275,10 +278,20 @@ def main(argv):
         casa_image = os.path.join(output_dir, output_filename)
         fits_image = casa_image.split(".image")[0] + ".fits"
 
-        # Continue if output already exists
+        # Continue if output already exists and is expected filesize
         if os.path.exists(fits_image):
-            logging.info(f'Output file already exists at {fits_image}. Skipping.')
-            continue
+            with fits.open(fits_image) as hdul:
+                header = hdul[0].header
+                data = hdul[0].data
+            raw_data_size = int(abs(header['BITPIX']) * math.prod(data.shape) / 8)
+            data_size = math.ceil(raw_data_size / FITS_BLOCK) * FITS_BLOCK
+            header_size = math.ceil(len(header)/HDU_CARDS_IN_BLOCK) * FITS_BLOCK
+            filesize = os.path.getsize(fits_image)
+            if filesize == (header_size + data_size):
+                logging.info(f'Output file already exists at {fits_image} and is correct size. Skipping.')
+                continue
+            else:
+                logging.info(f'Output file already exists at {fits_image} but is an incorrect size. Reprocessing.')
 
         try:
             # Update template header
