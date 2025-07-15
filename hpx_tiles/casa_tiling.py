@@ -279,19 +279,23 @@ def main(argv):
         fits_image = casa_image.split(".image")[0] + ".fits"
 
         # Continue if output already exists and is expected filesize
-        if os.path.exists(fits_image):
-            with fits.open(fits_image) as hdul:
-                header = hdul[0].header
-                data = hdul[0].data
-            raw_data_size = int(abs(header['BITPIX']) * math.prod(data.shape) / 8)
-            data_size = math.ceil(raw_data_size / FITS_BLOCK) * FITS_BLOCK
-            header_size = math.ceil(len(header)/HDU_CARDS_IN_BLOCK) * FITS_BLOCK
-            filesize = os.path.getsize(fits_image)
-            if filesize == (header_size + data_size):
-                logging.info(f'Output file already exists at {fits_image} and is correct size. Skipping.')
-                continue
-            else:
-                logging.info(f'Output file already exists at {fits_image} but is an incorrect size. Reprocessing.')
+        try:
+            if os.path.exists(fits_image):
+                with fits.open(fits_image) as hdul:
+                    header = hdul[0].header
+                    data = hdul[0].data  # Can get TypeError if data incomplete
+                raw_data_size = int(abs(header['BITPIX']) * math.prod(data.shape) / 8)
+                data_size = math.ceil(raw_data_size / FITS_BLOCK) * FITS_BLOCK
+                header_size = math.ceil(len(header)/HDU_CARDS_IN_BLOCK) * FITS_BLOCK
+                filesize = os.path.getsize(fits_image)
+                if filesize == (header_size + data_size):
+                    logging.info(f'Output file already exists at {fits_image} and is correct size. Skipping.')
+                    continue
+                else:
+                    logging.info(f'Output file already exists at {fits_image} but is an incorrect size. Reprocessing.')
+        except Exception as e:
+            logging.exception(e)
+            logging.info('Error. Reprocessing tile anyway.')
 
         try:
             # Update template header
