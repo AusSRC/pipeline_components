@@ -1,9 +1,11 @@
 import os
-import numpy as np
+import math
 import argparse
 import logging
-
 from astropy.io import fits
+
+HDU_CARDS_IN_BLOCK = 36  # 2880/80
+FITS_BLOCK = 2880
 
 # Set up the logger
 logger = logging.getLogger(__name__)
@@ -51,14 +53,9 @@ def split_number(num, n):
 
 
 def get_fits_header_bytes(infile):
+    """Get header as string and count bytes."""
     with fits.open(infile) as hdulist:
         header = hdulist[0].header
-
-    # get header as string and count bytes
-    #header_str = str(header)
-    #header_bytes = header_str.encode('utf-8')
-    #num_bytes = len(header_bytes)
-
     return header
 
 
@@ -99,12 +96,31 @@ def split_fits(infile, outpath, part):
     out_filename = f"{abs_outpath}/split_{lower}-{upper}_{in_filename}"
 
     # Check if output fits cube exists and channels match expected number
-    if os.path.exists(out_filename):
-        logger.info(f'Output file already exists at {out_filename}')
-        header = get_fits_header_bytes(out_filename)
-        if (header['NAXIS4'] == (upper - lower + 1)):
-            logger.info(f'Output file contains expected number of channels ({upper-lower+1}). Skipping.')
-            return
+    try:
+        if os.path.exists(out_filename):
+            # Check filesize is correct
+            with fits.open(out_filename) as hdul:
+                header = hdul[0].header
+                data = hdul[0].data  # Can get TypeError if data incomplete
+            raw_data_size = int(abs(header['BITPIX']) * math.prod(data.shape) / 8)
+            data_size = math.ceil(raw_data_size / FITS_BLOCK) * FITS_BLOCK
+            header_size = math.ceil(len(header)/HDU_CARDS_IN_BLOCK) * FITS_BLOCK
+            filesize = os.path.getsize(out_filename)
+            if filesize == (header_size + data_size):
+                logging.info(f'Output file already exists at {out_filename} and is correct size. Skipping.')
+                return
+            else:
+                logging.info(f'Output file already exists at {out_filename} but is an incorrect size. Reprocessing.')
+
+            # Check header info is correct
+            logger.info(f'Output file already exists at {out_filename}')
+            header = get_fits_header_bytes(out_filename)
+            if (header['NAXIS4'] == (upper - lower + 1)):
+                logger.info(f'Output file contains expected number of channels ({upper-lower+1}). Skipping.')
+                return
+    except Exception as e:
+        logger.exception(e)
+        logger.info('Error. Re-splitting data cube')
 
     logger.info(f"Creating {out_filename}")
 
@@ -141,6 +157,7 @@ def split_fits(infile, outpath, part):
         with open(out_filename, 'ab') as f:
             f.seek(0, os.SEEK_END)
             f.write(b'\0' * padding_size)
+    return
 
 
 def main(args):
