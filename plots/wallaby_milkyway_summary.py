@@ -25,7 +25,7 @@ from astroquery.skyview import SkyView
 import matplotlib.pyplot as plt
 
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 streamhdlr = logging.StreamHandler(sys.stdout)
@@ -77,6 +77,7 @@ async def milkyway_summary(pool, points, detection):
         hdu_mom0 = hdu_mom0[0]
         wcs = WCS(hdu_mom0.header)
         mom0 = hdu_mom0.data
+    logger.debug('Loaded moment 0')
 
     # Open moment 1 image
     with io.BytesIO() as buf:
@@ -85,12 +86,14 @@ async def milkyway_summary(pool, points, detection):
         hdu_mom1 = await loop.run_in_executor(None, partial(fits.open, buf))
         hdu_mom1 = hdu_mom1[0]
         mom1 = hdu_mom1.data
+    logger.debug('Loaded moment 1')
 
     # Spectrum
     with io.BytesIO() as buf:
         buf.write(product["spec"])
         buf.seek(0)
         spectrum = await loop.run_in_executor(None, partial(np.loadtxt, buf, dtype="float", comments="#", unpack=True))
+    logger.debug('Loaded spectrum')
 
     # Extract coordinate information
     nx = hdu_mom0.header["NAXIS1"]
@@ -109,9 +112,12 @@ async def milkyway_summary(pool, points, detection):
                         + math.cos(np.deg2rad(tmp3))
                         * math.cos(np.deg2rad(tmp4))
                         * math.cos(np.deg2rad(tmp1 - tmp2))))
+    logger.debug('Extracted coordinates')
 
     # Download DSS image from SkyView
     try:
+        logging.debug(f'Getting DSS image {clon} {clat}')
+        logging.debug(f'{width} {height}')
         hdu_opt = await loop.run_in_executor(
             None,
             partial(
@@ -123,8 +129,9 @@ async def milkyway_summary(pool, points, detection):
                 width=width * u.deg,
                 height=height * u.deg,
                 cache=None,
-                show_progress=False,)
+                show_progress=True,)
             )
+        logger.debug('Downloading DSS image')
 
         for h in hdu_opt:
             hdu = h[0]
@@ -133,6 +140,7 @@ async def milkyway_summary(pool, points, detection):
     except Exception as e:
         logger.error(f'Download error of DSS image for product id: {product_id}, error: {e}')
         raise e
+    logger.info(f'[{product_id}]: Downloaded DSS image')
 
     # Plot moment 0
     ax2 = plt.subplot2grid((3, 2), (0, 0), projection=wcs)
@@ -249,7 +257,7 @@ async def main(argv):
         'database': os.environ['DATABASE_NAME'],
         'user': os.environ['DATABASE_USER'],
         'password': os.environ['DATABASE_PASSWORD'],
-        'port': os.getenv('DEFAULT_PORT', 5432)
+        'port': os.getenv('DATABASE_PORT', 5432)
     }
     pool = await asyncpg.create_pool(
         **db_creds,
