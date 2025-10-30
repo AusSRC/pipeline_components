@@ -14,6 +14,7 @@ import argparse
 import logging
 import numpy as np
 from astropy.table import vstack
+from astropy.io import ascii
 from astropy.io.votable import parse
 import matplotlib.pyplot as plt
 
@@ -39,7 +40,14 @@ def main(argv):
     detection_table = None
     for f in files:
         votable = parse(f)
+        resource = votable.resources[0]
+        params = resource.params
+        input_region = eval([p for p in params if p.name=='input.region'][0].value)
+        (xmin, _, ymin, _, zmin, _) = input_region
         table = votable.get_first_table().to_table()
+        table['x'] = table['x'] + xmin
+        table['y'] = table['y'] + ymin
+        table['z'] = table['z'] + zmin
         logging.info(f'Joining {f} with {len(table)} rows')
         if detection_table is None:
             detection_table = table
@@ -50,7 +58,14 @@ def main(argv):
     f_sum = np.log10(np.array(detection_table['f_sum'].data))
     freq = np.array(detection_table['freq'].data) / 1e9
 
-    # Create plotla
+    # Create text file
+    write_table_filename = os.path.splitext(args.output)[0] + '.txt'
+    write_table = detection_table
+    write_table.keep_columns(['name', 'x', 'y', 'z', 'f_sum', 'f_max'])
+    write_table.sort('z')
+    ascii.write(write_table, write_table_filename, overwrite=True)
+
+    # Create plot
     plt.scatter(freq, f_sum, s=25, c="red")
     plt.xlabel("Frequency (GHz)")
     plt.ylabel("log(Flux / Jy Hz)")
