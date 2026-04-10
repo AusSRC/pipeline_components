@@ -1,0 +1,25 @@
+[project]
+name = "aussrc-tools"
+version = "0.1.0"
+description = "AusSRC data processing pipeline common Python utils"
+authors = [
+    {name="Austin Shen", email="austin.shen@csiro.au"},
+]
+license = {text = "Copyright 2020"}
+readme = "README.md"
+requires-python = ">= 3.8"
+
+dependencies = [
+    "astropy"
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.black]
+line-length = 79
+target-version = ["py310"]
