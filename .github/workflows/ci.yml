@@ -1,11 +1,14 @@
 name: cicd
 on:
   [push, pull_request]
-steps:
-  - uses: actions/checkout@v5
-    with:
-      submodules: true
-  - uses: ./python-templates/.github/workflows/ci.yml
-    with:
-      python-version: 3.12
-      cache: 'pip'
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: ./python-templates/.github/workflows/ci.yml
+        with:
+          python-version: 3.12
+          cache: 'pip'
