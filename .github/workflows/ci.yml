@@ -3,4 +3,4 @@ on:
   [push, pull_request]
 jobs:
   lint:
-    uses: AusSRC/python-templates/.github/workflows/ci.yml@main
+    uses: AusSRC/python-templates/.github/workflows/lint.yml@main
