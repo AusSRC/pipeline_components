@@ -353,7 +353,7 @@ def main(argv):
         except Exception as e:
             logging.error(f'Error tiling {pixel_id} for observation {obs_id}. Generating NaN tile')
             logging.error(f'Error message: {e}')
-            create_nan_tile(image_cube, tile_template, template_header["csys"]["direction0"]["crpix"], fits_image, overwrite=True)
+            create_nan_tile(image_cube, tile_template, np.array([ra, dec]), fits_image, overwrite=True)
 
     logging.info('Tiling for observation %s completed. Time elapsed is %.3f seconds.' % (obs_id, (time.time() - start)))
     return
