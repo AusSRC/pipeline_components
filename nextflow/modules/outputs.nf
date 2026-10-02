@@ -67,6 +67,7 @@ process plot_frequency_distribution {
         """
 }
 
+// Add a file to the run in the database. Not used by the workflows in this module.
 process database_insert {
     container = params.AUSSRC_TOOLS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
@@ -113,11 +114,10 @@ process cleanup {
 // Workflow
 // ----------------------------------------------------------------------------------------
 
+// Merge the moment 0 maps in the output directory into a single (compressed) file
 workflow moment0 {
     take:
         ready
-        run_name
-        database_env
         output_directory
         output_file
 
@@ -125,36 +125,25 @@ workflow moment0 {
         mosaic(ready,
                output_directory,
                output_file)
-        database_insert(mosaic.out.output_mom_file,
-                        "mom0",
-                        run_name,
-                        database_env,
-                        mosaic.out.output_mom_file)
-        compress(database_insert.out.ready, mosaic.out.output_mom_file)
+        compress(mosaic.out.output_mom_file, mosaic.out.output_mom_file)
 
     emit:
         done = compress.out.ready
 }
 
+// Plot the frequency distribution of the detections in the output directory
 workflow diagnostic_plot {
     take:
         ready
         run_name
         output_directory
         output_file
-        database_env
 
     main:
         plot_frequency_distribution(ready, run_name, output_directory, output_file)
-        database_insert(
-            plot_frequency_distribution.out.ready,
-            "frequency",
-            run_name,
-            database_env,
-            output_file)
 
     emit:
-        done = database_insert.out.ready
+        done = plot_frequency_distribution.out.ready
 }
 
 // ----------------------------------------------------------------------------------------
