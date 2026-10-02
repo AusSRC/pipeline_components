@@ -13,7 +13,7 @@ from keyrings.alt.file import PlaintextKeyring
 from astroquery.utils.tap.core import TapPlus
 from astroquery.casda import Casda
 import concurrent.futures
-from utils import download_files
+from aussrc_tools.casda_download.utils import download_files
 
 
 logging.basicConfig(

@@ -16,7 +16,7 @@ import concurrent.futures
 from keyrings.alt.file import PlaintextKeyring
 from astroquery.casda import Casda
 from astropy.table import Table
-from utils import download_files
+from aussrc_tools.casda_download.utils import download_files
 
 
 logging.basicConfig(

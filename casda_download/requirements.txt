@@ -1,8 +1,0 @@
-astropy
-astroquery
-asyncpg
-python-dotenv
-packaging
-pyvo
-jinja2
-keyrings.alt

@@ -7,7 +7,7 @@ nextflow.enable.dsl = 2
 // ----------------------------------------------------------------------------------------
 
 process mosaic {
-    container = params.WALLMERGE_IMAGE
+    container = params.AUSSRC_TOOLS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:
@@ -21,7 +21,7 @@ process mosaic {
     script:
         """
         #!/bin/bash
-        python3 -u /app/run_wallmerge.py \
+        python3 -u -m aussrc_tools.mom0.run_wallmerge \
             $output_directory \
             $output_file
         """
@@ -46,7 +46,7 @@ process compress {
 }
 
 process plot_frequency_distribution {
-    container = params.PIPELINE_PLOTS_IMAGE
+    container = params.AUSSRC_TOOLS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:
@@ -62,13 +62,13 @@ process plot_frequency_distribution {
         """
         #!/bin/bash
 
-        python3 /app/plot_frequency_distribution_xml.py \
+        python3 -m aussrc_tools.plots.plot_frequency_distribution_xml \
             -r $run_name -i $output_directory -o $output_file
         """
 }
 
 process database_insert {
-    container = params.PIPELINE_PLOTS_IMAGE
+    container = params.AUSSRC_TOOLS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:
@@ -85,7 +85,7 @@ process database_insert {
         """
         #!/bin/bash
 
-        python3 /app/add_plot_to_database.py \
+        python3 -m aussrc_tools.plots.add_plot_to_database \
             -c $column -r $run_name -e $database_env -f $file
         """
 }

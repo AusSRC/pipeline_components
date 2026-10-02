@@ -2,7 +2,7 @@
 
 import os
 import unittest
-from mosaicking import update_linmos_config
+from aussrc_tools.mosaicking import update_linmos_config
 
 
 DEFAULT_CONTENT = """
