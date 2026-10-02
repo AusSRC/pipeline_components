@@ -33,6 +33,8 @@ def parse_args(argv):
     parser.add_argument("--db_name", type=str, required=False)
     parser.add_argument("--db_username", type=str, required=False)
     parser.add_argument("--db_password", type=str, required=False)
+    parser.add_argument("--db_schema", type=str, required=False)
+    parser.add_argument("--db_port", type=str, required=False)
     parser.add_argument("--sofia_execute", type=str, required=False)
     parser.add_argument("--sofia_path", type=str, required=False)
     parser.add_argument("--sofia_processes", type=str, required=False)
@@ -68,6 +70,10 @@ def main(argv):
             args_dict["db_username"] = os.environ["DATABASE_USER"]
         if getattr(args, "db_password") is None:
             args_dict["db_password"] = os.environ["DATABASE_PASSWORD"]
+        if getattr(args, "db_schema") is None:
+            args_dict["db_schema"] = os.environ.get("DATABASE_SCHEMA")
+        if getattr(args, "db_port") is None:
+            args_dict["db_port"] = os.environ.get("DATABASE_PORT")
 
     # update config
     config = configparser.RawConfigParser()
@@ -76,6 +82,11 @@ def main(argv):
     for arg, val in args_dict.items():
         if (arg not in file_args) and val is not None:
             config.set("SoFiAX", arg, val)
+
+    # remove template placeholders that have not been set
+    for option, val in config.items("SoFiAX"):
+        if val.startswith("{{") and val.endswith("}}"):
+            config.remove_option("SoFiAX", option)
 
     os.umask(0)
 
