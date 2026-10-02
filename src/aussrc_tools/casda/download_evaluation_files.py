@@ -12,11 +12,9 @@ import requests
 import argparse
 import configparser
 import keyring
-import concurrent.futures
 from keyrings.alt.file import PlaintextKeyring
 from astroquery.casda import Casda
 from astropy.table import Table
-from aussrc_tools.casda_download.utils import download_files
 
 
 logging.basicConfig(
@@ -37,7 +35,12 @@ def parse_args(argv):
         "-s", "--sbid", type=str, required=True, help="SBID for observation"
     )
     parser.add_argument(
-        "-p", "--project_code", type=str, required=True, help="Project code"
+        "-p",
+        "--project_code",
+        type=str,
+        required=True,
+        nargs="+",
+        help="Project code(s)",
     )
     parser.add_argument(
         "-o",
@@ -60,7 +63,7 @@ def parse_args(argv):
 
 def main(argv):
     """Download evaluation files from CASDA for a given observation (sbid) and
-    for a specific project (project_code).
+    for one or more projects (project_code).
 
     """
     args = parse_args(argv)
@@ -75,18 +78,20 @@ def main(argv):
 
     # Get DID (data identifier)
     sbid = sbid.replace("ASKAP-", "")
-    did_url = f"{DID_URL}?projectCode={args.project_code}&sbid={sbid}"
-    logging.info(f"Request to {did_url}")
-    res = requests.get(did_url)
-    if res.status_code != 200:
-        raise Exception(f"Response: {res.reason} {res.status_code}")
-    logging.info(f"Response: {res.json()}")
+    evaluation_files = []
+    for project_code in args.project_code:
+        did_url = f"{DID_URL}?projectCode={project_code}&sbid={sbid}"
+        logging.info(f"Request to {did_url}")
+        res = requests.get(did_url)
+        if res.status_code != 200:
+            raise Exception(f"Response: {res.reason} {res.status_code}")
+        logging.info(f"Response: {res.json()}")
 
-    # NOTE: What does it mean to have multiple evaluation files?
-    evaluation_files = [f for f in res.json() if "evaluation" in f]
+        # NOTE: What does it mean to have multiple evaluation files?
+        evaluation_files += [f for f in res.json() if "evaluation" in f]
     evaluation_files.sort()
     if not evaluation_files:
-        logging.warn(
+        logging.warning(
             f"No evaluation files found with query parameters projectCode={args.project_code} and sbid={sbid}"
         )
         return
@@ -106,18 +111,6 @@ def main(argv):
     url_list = [url for url in url_list if not url.endswith("checksum")]
     file_list = casda.download_files(url_list, savedir=args.output)
 
-    """
-    # multithreaded download
-    file_list = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = []
-        for url in url_list:
-            if url.endswith('checksum'):
-                continue
-            futures.append(executor.submit(download_files, url=url, output=args.output))
-        for future in concurrent.futures.as_completed(futures):
-            file_list.append(future.result())
-    """
     logging.info(file_list)
     logging.info("Complete")
     return

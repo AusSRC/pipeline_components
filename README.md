@@ -18,14 +18,14 @@ The Python code is installed as the `aussrc_tools` package in two images, built 
 Scripts are run as modules from inside the container
 
 ```
-python3 -m aussrc_tools.casda_download.casda_download -s <sbid> -o <output_dir> -c <credentials> -p <project>
+python3 -m aussrc_tools.casda.download -q "<query>" -o <output_dir> -m <manifest> -c <credentials>
 ```
 
 ## Components
 
 | Component | Description |
 | --- | --- |
-| [casda_download](src/aussrc_tools/casda_download/README.md) | Download image cubes and evaluation files from CASDA |
+| [casda](src/aussrc_tools/casda/README.md) | Download image cubes and evaluation files from CASDA |
 | [hpx_tiles](src/aussrc_tools/hpx_tiles/README.md) | HPX tiling of POSSUM data cubes using CASA |
 | [metadata](src/aussrc_tools/metadata/README.md) | FITS header and observation metadata tools |
 | mom0 | Merge moment 0 maps |
