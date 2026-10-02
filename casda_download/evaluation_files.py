@@ -92,6 +92,12 @@ def main(argv):
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
+
+    # CASDA download
+    url_list = [url for url in url_list if not url.endswith('checksum')]
+    file_list = casda.download_files(url_list, savedir=args.output)
+
+    """
     # multithreaded download
     file_list = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -102,6 +108,7 @@ def main(argv):
             futures.append(executor.submit(download_files, url=url, output=args.output))
         for future in concurrent.futures.as_completed(futures):
             file_list.append(future.result())
+    """
     logging.info(file_list)
     logging.info('Complete')
     return

@@ -18,7 +18,7 @@ def main():
     cube_files_str = ",".join(cube_files)
 
     # /app for execution in docker image
-    cmd = f"/app/wallmerge.py {cube_files_str} {output_file}"
+    cmd = f"./wallmerge.py {cube_files_str} {output_file}"
     os.system(cmd)
 
 
