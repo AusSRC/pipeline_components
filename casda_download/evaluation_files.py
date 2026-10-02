@@ -22,11 +22,11 @@ from utils import download_files
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.INFO,
-    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s'
+    format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
 )
 
 keyring.set_keyring(PlaintextKeyring())
-KEYRING_SERVICE = 'astroquery:casda.csiro.au'
+KEYRING_SERVICE = "astroquery:casda.csiro.au"
 DID_URL = "https://casda.csiro.au/casda_data_access/metadata/evaluationEncapsulation"
 EVAL_URL = "https://data.csiro.au/casda_vo_proxy/vo/datalink/links?ID="
 
@@ -34,19 +34,25 @@ EVAL_URL = "https://data.csiro.au/casda_vo_proxy/vo/datalink/links?ID="
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-s", "--sbid", type=str, required=True, help="SBID for observation")
-    parser.add_argument(
-        "-p", "--project_code", type=str, required=True, help="Project code")
-    parser.add_argument(
-        "-o", "--output",
-        type=str, required=True,
-        help="Output directory for metadata files."
+        "-s", "--sbid", type=str, required=True, help="SBID for observation"
     )
     parser.add_argument(
-        "-c", "--credentials",
-        type=str, required=False,
+        "-p", "--project_code", type=str, required=True, help="Project code"
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Output directory for metadata files.",
+    )
+    parser.add_argument(
+        "-c",
+        "--credentials",
+        type=str,
+        required=False,
         help="CASDA credentials config file.",
-        default="./casda.ini"
+        default="./casda.ini",
     )
     args = parser.parse_args(argv)
     return args
@@ -61,12 +67,14 @@ def main(argv):
     sbid = args.sbid
     parser = configparser.ConfigParser()
     parser.read(args.credentials)
-    keyring.set_password(KEYRING_SERVICE, parser['CASDA']['username'], parser['CASDA']['password'])
+    keyring.set_password(
+        KEYRING_SERVICE, parser["CASDA"]["username"], parser["CASDA"]["password"]
+    )
     casda = Casda()
     casda.login(username=parser["CASDA"]["username"])
 
     # Get DID (data identifier)
-    sbid = sbid.replace('ASKAP-', '')
+    sbid = sbid.replace("ASKAP-", "")
     did_url = f"{DID_URL}?projectCode={args.project_code}&sbid={sbid}"
     logging.info(f"Request to {did_url}")
     res = requests.get(did_url)
@@ -78,7 +86,9 @@ def main(argv):
     evaluation_files = [f for f in res.json() if "evaluation" in f]
     evaluation_files.sort()
     if not evaluation_files:
-        logging.warn(f"No evaluation files found with query parameters projectCode={args.project_code} and sbid={sbid}")
+        logging.warn(
+            f"No evaluation files found with query parameters projectCode={args.project_code} and sbid={sbid}"
+        )
         return
     logging.info(f"Downloading evaluation files: {evaluation_files}")
 
@@ -92,9 +102,8 @@ def main(argv):
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-
     # CASDA download
-    url_list = [url for url in url_list if not url.endswith('checksum')]
+    url_list = [url for url in url_list if not url.endswith("checksum")]
     file_list = casda.download_files(url_list, savedir=args.output)
 
     """
@@ -110,7 +119,7 @@ def main(argv):
             file_list.append(future.result())
     """
     logging.info(file_list)
-    logging.info('Complete')
+    logging.info("Complete")
     return
 
 

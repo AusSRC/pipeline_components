@@ -19,12 +19,12 @@ from utils import download_files
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.INFO,
-    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s'
+    format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
 )
 
 astropy.utils.iers.conf.auto_download = False
 keyring.set_keyring(PlaintextKeyring())
-KEYRING_SERVICE = 'astroquery:casda.csiro.au'
+KEYRING_SERVICE = "astroquery:casda.csiro.au"
 URL = "https://casda.csiro.au/casda_vo_tools/tap"
 
 
@@ -32,7 +32,8 @@ WALLABY_QUERY = (
     "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND "
     "dataproduct_type='cube' AND ("
     "filename LIKE 'weights.i.%.cube.fits' OR "
-    "filename LIKE 'image.restored.i.%.cube.contsub.fits')")
+    "filename LIKE 'image.restored.i.%.cube.contsub.fits')"
+)
 
 WALLABY_MILKYWAY_QUERY = (
     "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) "
@@ -46,50 +47,66 @@ POSSUM_QUERY = (
     "filename LIKE 'image.restored.i.%.contcube.conv.fits' OR "
     "filename LIKE 'weights.q.%.contcube.fits' OR "
     "filename LIKE 'image.restored.q.%.contcube.conv.fits' OR "
-    "filename LIKE 'image.restored.u.%.contcube.conv.fits')")
+    "filename LIKE 'image.restored.u.%.contcube.conv.fits')"
+)
 
 EMU_QUERY = (
     "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND ( "
     "filename LIKE 'image.i.%.cont.taylor.%.restored.conv.fits' OR "
-    "filename LIKE 'weights.i.%.cont.taylor%.fits')")
+    "filename LIKE 'weights.i.%.cont.taylor%.fits')"
+)
 
 DINGO_QUERY = (
     "SELECT * FROM ivoa.obscore WHERE obs_id IN ($SBIDS) AND "
     "(filename LIKE 'weights.i.%.cube.fits' OR "
     "filename LIKE 'image.restored.i.%.cube.contsub.fits' OR "
-    "filename LIKE 'image.i.%.0.restored.conv.fits')")
+    "filename LIKE 'image.i.%.0.restored.conv.fits')"
+)
 
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-s", "--sbid",
-        type=str, required=True,
-        action='append', nargs='+', help="Scheduling block id number."
+        "-s",
+        "--sbid",
+        type=str,
+        required=True,
+        action="append",
+        nargs="+",
+        help="Scheduling block id number.",
     )
     parser.add_argument(
-        "-o", "--output",
-        type=str, required=True, help="Output directory for downloaded files."
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Output directory for downloaded files.",
     )
     parser.add_argument(
-        "-p", "--project",
-        type=str, required=True,
-        help="ASKAP project name (WALLABY or POSSUM)."
+        "-p",
+        "--project",
+        type=str,
+        required=True,
+        help="ASKAP project name (WALLABY or POSSUM).",
     )
     parser.add_argument(
-        "-c", "--credentials",
-        type=str, required=False,
-        help="CASDA credentials config file.", default="./casda.ini"
+        "-c",
+        "--credentials",
+        type=str,
+        required=False,
+        help="CASDA credentials config file.",
+        default="./casda.ini",
     )
     parser.add_argument(
-        "-m", "--manifest",
-        type=str, required=False,
-        help="Manifest Output"
+        "-m", "--manifest", type=str, required=False, help="Manifest Output"
     )
     parser.add_argument(
-        "-t", "--timeout",
-        type=int, required=False,
-        default=3000, help="CASDA download file timeout [seconds]"
+        "-t",
+        "--timeout",
+        type=int,
+        required=False,
+        default=3000,
+        help="CASDA download file timeout [seconds]",
     )
     args = parser.parse_args(argv)
     return args
@@ -130,7 +147,7 @@ def tap_query(project, sbid):
         query = query.replace("$SURVEY", str(project))
         logging.info(f"TAP Query: {query}")
     else:
-        raise Exception('Unexpected project name provided.')
+        raise Exception("Unexpected project name provided.")
 
     casdatap = TapPlus(url=URL, verbose=False)
     job = casdatap.launch_job_async(query)
@@ -151,7 +168,9 @@ async def main(argv):
     # stage
     parser = configparser.ConfigParser()
     parser.read(args.credentials)
-    keyring.set_password(KEYRING_SERVICE, parser['CASDA']['username'], parser['CASDA']['password'])
+    keyring.set_password(
+        KEYRING_SERVICE, parser["CASDA"]["username"], parser["CASDA"]["password"]
+    )
     casda = Casda()
     casda.login(username=parser["CASDA"]["username"])
     url_list = casda.stage_data(res, verbose=True)
@@ -162,7 +181,7 @@ async def main(argv):
         os.makedirs(args.output)
 
     # CASDA donwload
-    url_list = [url for url in url_list if not url.endswith('checksum')]
+    url_list = [url for url in url_list if not url.endswith("checksum")]
     file_list = casda.download_files(url_list, savedir=args.output)
 
     """
@@ -188,6 +207,7 @@ async def main(argv):
         with open(args.manifest, "w") as outfile:
             outfile.write(json.dumps(file_list))
             logging.info(f"Writing manifest complete: {args.manifest}")
+
 
 if __name__ == "__main__":
     argv = sys.argv[1:]

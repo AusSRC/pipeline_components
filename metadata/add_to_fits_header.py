@@ -16,14 +16,30 @@ logging.basicConfig(level=logging.INFO)
 
 def main(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", dest="image_cubes", nargs="+", help="Image cube files to add metadata to.")
-    parser.add_argument("-k", dest="keys", nargs="+", help="Keys to add to FITS header table", required=False)
-    parser.add_argument("-v", dest="values", nargs="+", help="Values to add to FITS header table", required=False)
+    parser.add_argument(
+        "-i", dest="image_cubes", nargs="+", help="Image cube files to add metadata to."
+    )
+    parser.add_argument(
+        "-k",
+        dest="keys",
+        nargs="+",
+        help="Keys to add to FITS header table",
+        required=False,
+    )
+    parser.add_argument(
+        "-v",
+        dest="values",
+        nargs="+",
+        help="Values to add to FITS header table",
+        required=False,
+    )
     args = parser.parse_args(argv)
     logging.info(args)
 
     # Assert key value length are the same
-    assert len(args.keys) == len(args.values), "Expect same number of keys and values to add to FITS header"
+    assert len(args.keys) == len(args.values), (
+        "Expect same number of keys and values to add to FITS header"
+    )
     kv_dict = {}
     for i, v in enumerate(args.values):
         key = args.keys[i]
@@ -45,13 +61,13 @@ def main(argv):
             hdr = hdu[0].header
             for k, v_list in kv_dict.items():
                 for v in v_list:
-                    if k in hdr and k != 'HISTORY' and k != 'COMMENT':
-                        v_upd = f'{hdr[k]} {v}'
-                        hdr[k] = v_upd.replace('\n', ' ')
-                        logging.info(f'[{f}] Updating header {k} = {v_upd}')
+                    if k in hdr and k != "HISTORY" and k != "COMMENT":
+                        v_upd = f"{hdr[k]} {v}"
+                        hdr[k] = v_upd.replace("\n", " ")
+                        logging.info(f"[{f}] Updating header {k} = {v_upd}")
                     else:
                         hdr[k] = v
-                        logging.info(f'[{f}] Added to header {k} = {v}')
+                        logging.info(f"[{f}] Added to header {k} = {v}")
 
 
 if __name__ == "__main__":

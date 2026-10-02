@@ -44,6 +44,7 @@ def parse_args(argv):
     args = parser.parse_args(argv)
     return args
 
+
 # Owner only
 def opener(path, flags):
     return os.open(path, flags, 0o600)

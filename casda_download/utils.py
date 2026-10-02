@@ -10,11 +10,19 @@ import urllib
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.INFO,
-    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s'
+    format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
 )
 
 
-def download_files(url, output, timeout=3000, check_exists=True, buffer=4*2**20, retry=3, sleep=5*60):
+def download_files(
+    url,
+    output,
+    timeout=3000,
+    check_exists=True,
+    buffer=4 * 2**20,
+    retry=3,
+    sleep=5 * 60,
+):
     """Download file from Pawsey with an URL provided by CASDA. Uses retries and restart download from
     failure if the file exists for robust download.
 
@@ -30,7 +38,7 @@ def download_files(url, output, timeout=3000, check_exists=True, buffer=4*2**20,
     """
     logging.info(f"Requesting: URL: {url} Timeout: {timeout}")
     if url is None:
-        raise ValueError('URL is empty')
+        raise ValueError("URL is empty")
 
     downloaded_bytes = 0
     tries = 0
@@ -39,25 +47,33 @@ def download_files(url, output, timeout=3000, check_exists=True, buffer=4*2**20,
             req = urllib.request.urlopen(url, timeout=timeout)
             filename = req.info().get_filename()
             filepath = f"{output}/{filename}"
-            http_size = int(req.info()['Content-Length'])
+            http_size = int(req.info()["Content-Length"])
 
             # File exists and is same size; do nothing and return
-            if check_exists and os.path.exists(filepath) and os.path.getsize(filepath) == http_size:
-                logging.info(f"File exists and is expected size: {os.path.basename(filepath)} {http_size}")
+            if (
+                check_exists
+                and os.path.exists(filepath)
+                and os.path.getsize(filepath) == http_size
+            ):
+                logging.info(
+                    f"File exists and is expected size: {os.path.basename(filepath)} {http_size}"
+                )
                 return filepath
 
             # Resume download from bytes already downloaded
             if os.path.exists(filepath) and os.path.getsize(filepath) != http_size:
                 downloaded_bytes = os.path.getsize(filepath)
-                logging.info(f"Resuming download: {os.path.basename(filepath)} {downloaded_bytes} bytes")
-                headers = {'Range': f'bytes={downloaded_bytes}-'}
-                mode = 'ab'
+                logging.info(
+                    f"Resuming download: {os.path.basename(filepath)} {downloaded_bytes} bytes"
+                )
+                headers = {"Range": f"bytes={downloaded_bytes}-"}
+                mode = "ab"
 
             # Starting download when there is no file
             elif not os.path.exists(filepath):
                 logging.info(f"Starting download: {os.path.basename(filepath)}")
                 headers = {}
-                mode = 'wb'
+                mode = "wb"
 
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -71,15 +87,17 @@ def download_files(url, output, timeout=3000, check_exists=True, buffer=4*2**20,
 
                 download_size = os.path.getsize(filepath)
                 if http_size != download_size:
-                    raise ValueError(f"File size does not match file {download_size} and http {http_size}")
+                    raise ValueError(
+                        f"File size does not match file {download_size} and http {http_size}"
+                    )
 
                 logging.info(f"Download complete: {os.path.basename(filepath)}")
                 return filepath
         except (OSError, ValueError) as e:
             tries += 1
             logging.exception(e)
-            logging.info(f'Download error. Retry number {tries}. Error: {e}')
-            logging.info(f'Sleeping for {sleep} seconds before retrying.')
+            logging.info(f"Download error. Retry number {tries}. Error: {e}")
+            logging.info(f"Sleeping for {sleep} seconds before retrying.")
             time.sleep(sleep)
-    raise Exception(f'Download retried {retry} times with each failing.')
+    raise Exception(f"Download retried {retry} times with each failing.")
     return None

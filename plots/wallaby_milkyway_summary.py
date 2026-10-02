@@ -29,13 +29,15 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 streamhdlr = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+formatter = logging.Formatter(
+    fmt="%(asctime)s %(levelname)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
+)
 streamhdlr.setFormatter(formatter)
 logger.addHandler(streamhdlr)
 
 
-C = 2.99792E8  # m/s
-HI_RESTFREQ = 1.42040575e+9  # Hz
+C = 2.99792e8  # m/s
+HI_RESTFREQ = 1.42040575e9  # Hz
 
 
 def get_aspect(ax):
@@ -51,8 +53,8 @@ async def milkyway_summary(pool, points, detection):
     # Get product
     async with pool.acquire() as conn:
         product = await conn.fetchrow(
-            "SELECT * FROM product WHERE detection_id=$1",
-            int(detection["id"]))
+            "SELECT * FROM product WHERE detection_id=$1", int(detection["id"])
+        )
 
     if not product:
         logger.info("No products")
@@ -62,7 +64,7 @@ async def milkyway_summary(pool, points, detection):
         logger.error(f"mom0, mom1 or spec missing for detection {detection['id']}")
         return
 
-    product_id = int(product['id'])
+    product_id = int(product["id"])
     logger.info(f"Processing product id: {product_id}")
 
     # Plot figure size
@@ -77,7 +79,7 @@ async def milkyway_summary(pool, points, detection):
         hdu_mom0 = hdu_mom0[0]
         wcs = WCS(hdu_mom0.header)
         mom0 = hdu_mom0.data
-    logger.debug('Loaded moment 0')
+    logger.debug("Loaded moment 0")
 
     # Open moment 1 image
     with io.BytesIO() as buf:
@@ -86,14 +88,16 @@ async def milkyway_summary(pool, points, detection):
         hdu_mom1 = await loop.run_in_executor(None, partial(fits.open, buf))
         hdu_mom1 = hdu_mom1[0]
         mom1 = hdu_mom1.data
-    logger.debug('Loaded moment 1')
+    logger.debug("Loaded moment 1")
 
     # Spectrum
     with io.BytesIO() as buf:
         buf.write(product["spec"])
         buf.seek(0)
-        spectrum = await loop.run_in_executor(None, partial(np.loadtxt, buf, dtype="float", comments="#", unpack=True))
-    logger.debug('Loaded spectrum')
+        spectrum = await loop.run_in_executor(
+            None, partial(np.loadtxt, buf, dtype="float", comments="#", unpack=True)
+        )
+    logger.debug("Loaded spectrum")
 
     # Extract coordinate information
     nx = hdu_mom0.header["NAXIS1"]
@@ -101,23 +105,31 @@ async def milkyway_summary(pool, points, detection):
     clon, clat = wcs.all_pix2world(nx / 2, ny / 2, 0)
     tmp1, tmp3 = wcs.all_pix2world(0, ny / 2, 0)
     tmp2, tmp4 = wcs.all_pix2world(nx, ny / 2, 0)
-    width = np.rad2deg(math.acos(math.sin(np.deg2rad(tmp3)) * math.sin(np.deg2rad(tmp4))
-                        + math.cos(np.deg2rad(tmp3))
-                        * math.cos(np.deg2rad(tmp4))
-                        * math.cos(np.deg2rad(tmp1 - tmp2))))
+    width = np.rad2deg(
+        math.acos(
+            math.sin(np.deg2rad(tmp3)) * math.sin(np.deg2rad(tmp4))
+            + math.cos(np.deg2rad(tmp3))
+            * math.cos(np.deg2rad(tmp4))
+            * math.cos(np.deg2rad(tmp1 - tmp2))
+        )
+    )
 
     tmp1, tmp3 = wcs.all_pix2world(nx / 2, 0, 0)
     tmp2, tmp4 = wcs.all_pix2world(nx / 2, ny, 0)
-    height = np.rad2deg(math.acos(math.sin(np.deg2rad(tmp3)) * math.sin(np.deg2rad(tmp4))
-                        + math.cos(np.deg2rad(tmp3))
-                        * math.cos(np.deg2rad(tmp4))
-                        * math.cos(np.deg2rad(tmp1 - tmp2))))
-    logger.debug('Extracted coordinates')
+    height = np.rad2deg(
+        math.acos(
+            math.sin(np.deg2rad(tmp3)) * math.sin(np.deg2rad(tmp4))
+            + math.cos(np.deg2rad(tmp3))
+            * math.cos(np.deg2rad(tmp4))
+            * math.cos(np.deg2rad(tmp1 - tmp2))
+        )
+    )
+    logger.debug("Extracted coordinates")
 
     # Download DSS image from SkyView
     try:
-        logging.debug(f'Getting DSS image {clon} {clat}')
-        logging.debug(f'{width} {height}')
+        logging.debug(f"Getting DSS image {clon} {clat}")
+        logging.debug(f"{width} {height}")
         hdu_opt = await loop.run_in_executor(
             None,
             partial(
@@ -129,18 +141,21 @@ async def milkyway_summary(pool, points, detection):
                 width=width * u.deg,
                 height=height * u.deg,
                 cache=None,
-                show_progress=True,)
-            )
-        logger.debug('Downloading DSS image')
+                show_progress=True,
+            ),
+        )
+        logger.debug("Downloading DSS image")
 
         for h in hdu_opt:
             hdu = h[0]
             wcs_opt = WCS(hdu.header)
             break
     except Exception as e:
-        logger.error(f'Download error of DSS image for product id: {product_id}, error: {e}')
+        logger.error(
+            f"Download error of DSS image for product id: {product_id}, error: {e}"
+        )
         raise e
-    logger.info(f'[{product_id}]: Downloaded DSS image')
+    logger.info(f"[{product_id}]: Downloaded DSS image")
 
     # Plot moment 0
     ax2 = plt.subplot2grid((3, 2), (0, 0), projection=wcs)
@@ -181,7 +196,8 @@ async def milkyway_summary(pool, points, detection):
         origin="lower",
         vmin=bmin,
         vmax=bmax,
-        cmap=plt.get_cmap("gist_rainbow"),)
+        cmap=plt.get_cmap("gist_rainbow"),
+    )
 
     ax3.grid(color="grey", ls="solid")
     ax3.set_xlabel("Right ascension (J2000)")
@@ -208,19 +224,38 @@ async def milkyway_summary(pool, points, detection):
     ax4.grid(True)
     ax4.set_xlim([xmin, xmax])
     ax4.set_ylim([ymin, ymax])
-    ax4.set_aspect('auto')
+    ax4.set_aspect("auto")
 
     # Plot location of detection
     ax5 = plt.subplot2grid((3, 2), (2, 0), colspan=2)
-    cm = plt.cm.get_cmap('RdYlBu_r')
-    sc = ax5.scatter(points[0], points[1], c=points[2], vmin=min(points[2]), vmax=max(points[2]), s=35, cmap=cm, marker='.', alpha=0.5)
-    plt.colorbar(sc, ax=ax5, label='km/s')
-    ax5.scatter(detection['x'], detection['y'], s=100, marker='o', facecolors='none', edgecolors='green')
+    cm = plt.cm.get_cmap("RdYlBu_r")
+    sc = ax5.scatter(
+        points[0],
+        points[1],
+        c=points[2],
+        vmin=min(points[2]),
+        vmax=max(points[2]),
+        s=35,
+        cmap=cm,
+        marker=".",
+        alpha=0.5,
+    )
+    plt.colorbar(sc, ax=ax5, label="km/s")
+    ax5.scatter(
+        detection["x"],
+        detection["y"],
+        s=100,
+        marker="o",
+        facecolors="none",
+        edgecolors="green",
+    )
     ax5.set_title("Detection location")
-    ax5.set_aspect('auto')
+    ax5.set_aspect("auto")
 
     plt.suptitle(detection["name"].replace("_", " ").replace("-", "−"), fontsize=16)
-    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.6)
+    plt.subplots_adjust(
+        left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.6
+    )
 
     with io.BytesIO() as buf:
         plt.savefig(buf, format="png")
@@ -230,9 +265,7 @@ async def milkyway_summary(pool, points, detection):
 
     async with pool.acquire() as conn:
         await conn.execute(
-            "UPDATE product SET plot=$1 WHERE id=$2",
-            summary_plot,
-            product_id
+            "UPDATE product SET plot=$1 WHERE id=$2", summary_plot, product_id
         )
     logger.info(f"Updated product id: {product_id}")
     return
@@ -246,37 +279,54 @@ async def main(argv):
 
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--run', type=str, required=True, help='Run name')
-    parser.add_argument('-e', '--env', type=str, required=False, default='database.env', help='Database environment file')
-    parser.add_argument('-n', '--max', type=int, required=False, default=10, help='Max number of concurrent downloads')
+    parser.add_argument("-r", "--run", type=str, required=True, help="Run name")
+    parser.add_argument(
+        "-e",
+        "--env",
+        type=str,
+        required=False,
+        default="database.env",
+        help="Database environment file",
+    )
+    parser.add_argument(
+        "-n",
+        "--max",
+        type=int,
+        required=False,
+        default=10,
+        help="Max number of concurrent downloads",
+    )
     args = parser.parse_args(argv)
-    assert os.path.exists(args.env), f'Provided environment file {args.env} does not exist'
+    assert os.path.exists(args.env), (
+        f"Provided environment file {args.env} does not exist"
+    )
     load_dotenv(args.env)
     db_creds = {
-        'host': os.environ['DATABASE_HOST'],
-        'database': os.environ['DATABASE_NAME'],
-        'user': os.environ['DATABASE_USER'],
-        'password': os.environ['DATABASE_PASSWORD'],
-        'port': os.getenv('DATABASE_PORT', 5432)
+        "host": os.environ["DATABASE_HOST"],
+        "database": os.environ["DATABASE_NAME"],
+        "user": os.environ["DATABASE_USER"],
+        "password": os.environ["DATABASE_PASSWORD"],
+        "port": os.getenv("DATABASE_PORT", 5432),
     }
     pool = await asyncpg.create_pool(
-        **db_creds,
-        server_settings={'search_path': os.environ['DATABASE_SCHEMA']}
+        **db_creds, server_settings={"search_path": os.environ["DATABASE_SCHEMA"]}
     )
 
     # Extract detections from run
-    logger.info(f'Generating milkyway summary figures for run {args.run}')
+    logger.info(f"Generating milkyway summary figures for run {args.run}")
     async with pool.acquire() as conn:
-        run = await conn.fetchrow('SELECT * FROM run WHERE name=$1', args.run)
+        run = await conn.fetchrow("SELECT * FROM run WHERE name=$1", args.run)
         if run is None:
-            raise Exception(f'No run with name {args.run} exists.')
-        detections = await conn.fetch('SELECT * FROM detection WHERE run_id=$1 ORDER BY id ASC', int(run['id']))
-        logger.info(f'Updating {len(detections)} product entries')
+            raise Exception(f"No run with name {args.run} exists.")
+        detections = await conn.fetch(
+            "SELECT * FROM detection WHERE run_id=$1 ORDER BY id ASC", int(run["id"])
+        )
+        logger.info(f"Updating {len(detections)} product entries")
 
     # scatter plot of detection positions
-    x = [int(d['x']) for d in detections]
-    y = [int(d['y']) for d in detections]
-    freq = np.array([int(d['freq']) for d in detections])
+    x = [int(d["x"]) for d in detections]
+    y = [int(d["y"]) for d in detections]
+    freq = np.array([int(d["freq"]) for d in detections])
     velocity = C * (HI_RESTFREQ / freq - 1) / 1e3
     points = np.array([x, y, velocity.tolist()])
 
@@ -289,17 +339,18 @@ async def main(argv):
         if not chunk:
             break
 
-        task_list = [asyncio.create_task(milkyway_summary(pool, points, c)) for c in chunk]
+        task_list = [
+            asyncio.create_task(milkyway_summary(pool, points, c)) for c in chunk
+        ]
         await asyncio.gather(*task_list)
 
         count += len(task_list)
         logging.info(f"Processed {count} of {total} Run: {args.run}")
 
-
     # Finish
     await pool.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     argv = sys.argv[1:]
     asyncio.run(main(argv))

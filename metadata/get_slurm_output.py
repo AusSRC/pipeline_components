@@ -138,7 +138,7 @@ async def main(argv):
         if obs is None:
             raise Exception(f"No observation in WALLABY database for SBID={args.sbid}")
         logging.info(f"Found observation: {obs}")
-        logging.info(f'Updating metadata for observation {obs["id"]}')
+        logging.info(f"Updating metadata for observation {obs['id']}")
         await conn.execute(
             "INSERT INTO wallaby.observation_metadata (observation_id, slurm_output) \
             VALUES ($1, $2) \

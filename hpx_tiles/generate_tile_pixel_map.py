@@ -57,7 +57,7 @@ def get_deg(hms_array, dms_array):
 
     conversion_hms = []
     conversion_dms = []
-    for (hms, dms) in zip(hms_array, dms_array):
+    for hms, dms in zip(hms_array, dms_array):
         conversion_hms.append(hms2deg(hms))
         conversion_dms.append(dms2deg(dms))
     return conversion_hms, conversion_dms
@@ -78,14 +78,19 @@ def points_within_circle(x0, y0, radius, num_points=4):
     if isinstance(x0, list):
         ra_corners = []
         dec_corners = []
-        for (x_0, y_0) in zip(x0, y0):
+        for x_0, y_0 in zip(x0, y0):
             declination = radius * numpy.sin(angle) + y_0
-            dec_corners.append( declination )
-            ra_corners.append( (radius * numpy.cos(angle))/numpy.cos(numpy.deg2rad(declination)) + x_0 )
+            dec_corners.append(declination)
+            ra_corners.append(
+                (radius * numpy.cos(angle)) / numpy.cos(numpy.deg2rad(declination))
+                + x_0
+            )
 
     else:
         dec_corners = radius * numpy.sin(angle) + y0
-        ra_corners =  (radius * numpy.cos(angle))/numpy.cos(numpy.deg2rad(dec_corners)) + x0
+        ra_corners = (radius * numpy.cos(angle)) / numpy.cos(
+            numpy.deg2rad(dec_corners)
+        ) + x0
 
     ra_corners = numpy.asarray(ra_corners)
     dec_corners = numpy.asarray(dec_corners)
@@ -116,7 +121,6 @@ def generate_DS9_polygons(healpix_pixel, nside, outname_prefix):
     centers = []
     texts = []
     for pixel in healpix_pixel:
-
         corner = hp.boundaries_lonlat(pixel, step=1) * u.deg
         RA, DEC = corner.value
         RA = RA[0]
@@ -139,12 +143,14 @@ def generate_DS9_polygons(healpix_pixel, nside, outname_prefix):
         circle_string = "circle(%f, %f, %f)" % (center_RA, center_DEC, 0.1)
         centers.append(circle_string)
 
-        text_string = f'text {center_RA} {center_DEC} {{{pixel}}}'
+        text_string = f"text {center_RA} {center_DEC} {{{pixel}}}"
         texts.append(text_string)
 
     first_line = "#Region file format: DS9 version 4.1 \n"
-    second_line = 'global color=black dashlist=8 3 width=2 font="helvetica 10 normal roman" \
+    second_line = (
+        'global color=black dashlist=8 3 width=2 font="helvetica 10 normal roman" \
     select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n'
+    )
     third_line = "fk5 \n"
     SB = outname_prefix
 
@@ -195,8 +201,12 @@ def reference_header(naxis, cdelt):
     hdr += "NAXIS2  =                %d / length of data axis 2 \n" % naxis
     hdr += "EXTEND  =                    F / No FITS extensions are present \n"
     # NOTE: update adding 0.5 to CRPIX 1/2 to fix [2049, 2049, X, X] shape error
-    hdr += "CRPIX1  =             %r / Coordinate reference pixel \n" % ((naxis / 2.0) + 0.5)
-    hdr += "CRPIX2  =             %r / Coordinate reference pixel \n" % ((naxis / 2.0) + 0.5)
+    hdr += "CRPIX1  =             %r / Coordinate reference pixel \n" % (
+        (naxis / 2.0) + 0.5
+    )
+    hdr += "CRPIX2  =             %r / Coordinate reference pixel \n" % (
+        (naxis / 2.0) + 0.5
+    )
     hdr += "PC1_1   =           0.70710677 / Transformation matrix element \n"
     hdr += "PC1_2   =           0.70710677 / Transformation matrix element \n"
     hdr += "PC2_1   =           -0.70710677 / Transformation matrix element \n"
@@ -231,8 +241,8 @@ def tile_number_to_tile_parameters(Nside, hpx_ids, tile_size, hpx_wcs):
         x, y = hpx_wcs.wcs_world2pix(lon, lat, 0)
 
         # NOTE: required correction for all edge tiling for all packages
-        CRPIX1.append(numpy.round(-1 * x + tile_size, 5).astype('float'))
-        CRPIX2.append(numpy.round(-1 * y + tile_size, 5).astype('float'))
+        CRPIX1.append(numpy.round(-1 * x + tile_size, 5).astype("float"))
+        CRPIX2.append(numpy.round(-1 * y + tile_size, 5).astype("float"))
         CRVAL1.append(lon.value)
         CRVAL2.append(lat.value)
 
@@ -278,7 +288,7 @@ def main(argv):
     args = parse_args(argv)
     logging.info(args)
 
-    #if not os.path.exists(args.output):
+    # if not os.path.exists(args.output):
     try:
         os.makedirs(args.output, exist_ok=True)
     except FileExistsError:
@@ -345,10 +355,7 @@ def main(argv):
     HPX_hdr = fits.Header.fromstring("""%s""" % HPX_hdr, sep="\n")
     HPX_wcs = WCS(HPX_hdr)
     crpix_ra, crpix_dec, hpx_ra, hpx_dec = tile_number_to_tile_parameters(
-        Nside=nside,
-        hpx_ids=hpx_pixels,
-        tile_size=naxis,
-        hpx_wcs=HPX_wcs
+        Nside=nside, hpx_ids=hpx_pixels, tile_size=naxis, hpx_wcs=HPX_wcs
     )
 
     # TODO: loop not necessary
@@ -393,7 +400,6 @@ def main(argv):
         data = []
         j = 0
         for hpx in numpy.unique(SBs_HPX):
-
             count = SBs_HPX.count(hpx)
 
             if count == 1:

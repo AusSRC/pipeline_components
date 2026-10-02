@@ -16,28 +16,32 @@ def parse_args(argv):
         "--path",
         type=str,
         required=True,
-        help="Path to directory containing evaluation files.",)
+        help="Path to directory containing evaluation files.",
+    )
     parser.add_argument(
         "-f",
         "--file",
         type=str,
         required=True,
         help="File (or keyword in file) for compressed metadata file",
-        default="calibration-metadata-processing-logs",)
+        default="calibration-metadata-processing-logs",
+    )
     parser.add_argument(
         "-k",
         "--keyword",
         type=str,
         required=True,
         help="Search key word for identifying file of interest",
-        default="metadata/footprintOutput",)
+        default="metadata/footprintOutput",
+    )
     parser.add_argument(
         "-o",
         "--output",
         type=str,
         required=True,
         help="Output directory",
-        default="metadata",)
+        default="metadata",
+    )
 
     args = parser.parse_args(argv)
     return args
@@ -63,7 +67,9 @@ def main(argv):
     if not filelist:
         # scan the input directory for the existing file
         keyfile = None
-        for f in glob.glob(f"{args.path}/**/{os.path.basename(args.keyword)}*", recursive=True):
+        for f in glob.glob(
+            f"{args.path}/**/{os.path.basename(args.keyword)}*", recursive=True
+        ):
             if os.path.islink(f):
                 continue
             else:
@@ -71,11 +77,15 @@ def main(argv):
                 return
 
         if keyfile is None:
-            raise Exception(f"No files found in {args.path} with compressed file matching {args.file}")
+            raise Exception(
+                f"No files found in {args.path} with compressed file matching {args.file}"
+            )
 
     tarfiles = [f for f in filelist if (("checksum" not in f) and (".tar" in f))]
     if not tarfiles:
-        raise Exception(f"No compressed files found in {args.path} with filename matching {args.file}")
+        raise Exception(
+            f"No compressed files found in {args.path} with filename matching {args.file}"
+        )
 
     for tf in tarfiles:
         with tarfile.open(tf) as tar:
@@ -98,6 +108,7 @@ def main(argv):
         raise Exception(f"No file found {filename}")
 
     print(filename, end="")
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

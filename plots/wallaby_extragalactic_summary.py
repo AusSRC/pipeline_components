@@ -34,7 +34,9 @@ warnings.filterwarnings("ignore")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 streamhdlr = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+formatter = logging.Formatter(
+    fmt="%(asctime)s %(levelname)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
+)
 streamhdlr.setFormatter(formatter)
 logger.addHandler(streamhdlr)
 
@@ -53,18 +55,22 @@ async def summary_plot(pool, detection):
         # Get product
         async with pool.acquire() as conn:
             product = await conn.fetchrow(
-                "SELECT * FROM product WHERE detection_id=$1",
-                int(detection["id"]))
+                "SELECT * FROM product WHERE detection_id=$1", int(detection["id"])
+            )
 
         if not product:
             logging.info("No products")
             return
 
-        if product["mom0"] is None or product["mom1"] is None or product["spec"] is None:
+        if (
+            product["mom0"] is None
+            or product["mom1"] is None
+            or product["spec"] is None
+        ):
             logging.warn(f"mom0, mom1 or spec missing for detection {detection['id']}")
             return
 
-        product_id = int(product['id'])
+        product_id = int(product["id"])
 
         logging.info(f"Processing product id: {product_id}")
 
@@ -93,7 +99,9 @@ async def summary_plot(pool, detection):
         with io.BytesIO() as buf:
             buf.write(product["spec"])
             buf.seek(0)
-            spectrum = await loop.run_in_executor(None, partial(np.loadtxt, buf, dtype="float", comments="#", unpack=True))
+            spectrum = await loop.run_in_executor(
+                None, partial(np.loadtxt, buf, dtype="float", comments="#", unpack=True)
+            )
 
         # Extract coordinate information
         nx = hdu_mom0.header["NAXIS1"]
@@ -101,17 +109,25 @@ async def summary_plot(pool, detection):
         clon, clat = wcs.all_pix2world(nx / 2, ny / 2, 0)
         tmp1, tmp3 = wcs.all_pix2world(0, ny / 2, 0)
         tmp2, tmp4 = wcs.all_pix2world(nx, ny / 2, 0)
-        width = np.rad2deg(math.acos(math.sin(np.deg2rad(tmp3)) * math.sin(np.deg2rad(tmp4))
-                            + math.cos(np.deg2rad(tmp3))
-                            * math.cos(np.deg2rad(tmp4))
-                            * math.cos(np.deg2rad(tmp1 - tmp2))))
+        width = np.rad2deg(
+            math.acos(
+                math.sin(np.deg2rad(tmp3)) * math.sin(np.deg2rad(tmp4))
+                + math.cos(np.deg2rad(tmp3))
+                * math.cos(np.deg2rad(tmp4))
+                * math.cos(np.deg2rad(tmp1 - tmp2))
+            )
+        )
 
         tmp1, tmp3 = wcs.all_pix2world(nx / 2, 0, 0)
         tmp2, tmp4 = wcs.all_pix2world(nx / 2, ny, 0)
-        height = np.rad2deg(math.acos(math.sin(np.deg2rad(tmp3)) * math.sin(np.deg2rad(tmp4))
-                            + math.cos(np.deg2rad(tmp3))
-                            * math.cos(np.deg2rad(tmp4))
-                            * math.cos(np.deg2rad(tmp1 - tmp2))))
+        height = np.rad2deg(
+            math.acos(
+                math.sin(np.deg2rad(tmp3)) * math.sin(np.deg2rad(tmp4))
+                + math.cos(np.deg2rad(tmp3))
+                * math.cos(np.deg2rad(tmp4))
+                * math.cos(np.deg2rad(tmp1 - tmp2))
+            )
+        )
 
         # Download DSS image from SkyView
         try:
@@ -126,15 +142,18 @@ async def summary_plot(pool, detection):
                     width=width * u.deg,
                     height=height * u.deg,
                     cache=None,
-                    show_progress=False,)
-                )
+                    show_progress=False,
+                ),
+            )
 
             for h in hdu_opt:
                 hdu = h[0]
                 wcs_opt = WCS(hdu.header)
                 break
         except Exception as e:
-            logging.error(f'Download error of DSS image for product id: {product_id}, error: {e}')
+            logging.error(
+                f"Download error of DSS image for product id: {product_id}, error: {e}"
+            )
             raise e
 
         # Plot moment 0
@@ -149,7 +168,9 @@ async def summary_plot(pool, detection):
         ar = get_aspect(ax2)
 
         # Add beam size
-        e = Ellipse((5, 5), width=5, height=5, angle=0, edgecolor="peru", facecolor="peru")
+        e = Ellipse(
+            (5, 5), width=5, height=5, angle=0, edgecolor="peru", facecolor="peru"
+        )
         ax2.add_patch(e)
 
         # Plot DSS image with HI contours
@@ -180,7 +201,8 @@ async def summary_plot(pool, detection):
             origin="lower",
             vmin=bmin,
             vmax=bmax,
-            cmap=plt.get_cmap("gist_rainbow"),)
+            cmap=plt.get_cmap("gist_rainbow"),
+        )
 
         ax3.grid(color="grey", ls="solid")
         ax3.set_xlabel("Right ascension (J2000)")
@@ -206,10 +228,12 @@ async def summary_plot(pool, detection):
         ax4.grid(True)
         ax4.set_xlim([xmin, xmax])
         ax4.set_ylim([ymin, ymax])
-        ax4.set_aspect('auto')
+        ax4.set_aspect("auto")
 
         plt.suptitle(detection["name"].replace("_", " ").replace("-", "−"), fontsize=16)
-        plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.3)
+        plt.subplots_adjust(
+            left=None, bottom=None, right=None, top=None, wspace=0.5, hspace=0.3
+        )
 
         with io.BytesIO() as buf:
             plt.savefig(buf, format="png")
@@ -218,14 +242,17 @@ async def summary_plot(pool, detection):
             plt.close()
 
         async with pool.acquire() as conn:
-            await conn.execute("UPDATE product SET plot=$1 WHERE id=$2",
-                                summary_plot,
-                                product_id)
+            await conn.execute(
+                "UPDATE product SET plot=$1 WHERE id=$2", summary_plot, product_id
+            )
 
         logging.info(f"Updated product id: {product_id}")
 
     except Exception as e:
-        logging.info('Update summary plot failed for detection %i %s' % (int(detection['id']), detection['name']))
+        logging.info(
+            "Update summary plot failed for detection %i %s"
+            % (int(detection["id"]), detection["name"])
+        )
         logging.exception(e)
 
 
@@ -233,7 +260,8 @@ async def main(argv):
     # Arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-r", "--run", type=str, required=True, help="Run name for detections")
+        "-r", "--run", type=str, required=True, help="Run name for detections"
+    )
 
     parser.add_argument(
         "-e",
@@ -241,7 +269,8 @@ async def main(argv):
         type=str,
         required=False,
         help="Database credentials",
-        default="database.env",)
+        default="database.env",
+    )
 
     parser.add_argument("-i", dest="index", help="Starting index", default=0, type=int)
     parser.add_argument(
@@ -249,7 +278,8 @@ async def main(argv):
         dest="max",
         help="Max number of concurrent downloads",
         default=10,
-        type=int,)
+        type=int,
+    )
 
     args = parser.parse_args(argv)
     load_dotenv(args.env)
@@ -260,12 +290,12 @@ async def main(argv):
         "database": os.environ["DATABASE_NAME"],
         "user": os.environ["DATABASE_USER"],
         "password": os.environ["DATABASE_PASSWORD"],
-	    "port": os.getenv("DATABASE_PORT", 5432)
+        "port": os.getenv("DATABASE_PORT", 5432),
     }
     schema = os.environ["DATABASE_SCHEMA"]
 
     # Fetch runs and detections
-    pool = await asyncpg.create_pool(**creds, server_settings={'search_path': schema})
+    pool = await asyncpg.create_pool(**creds, server_settings={"search_path": schema})
     async with pool.acquire() as conn:
         run = await conn.fetchrow("SELECT * FROM run WHERE name=$1", args.run)
         if run is None:
@@ -274,7 +304,8 @@ async def main(argv):
         logging.info(f"Adding DSS images to detection product in run {args.run}")
 
         detections = await conn.fetch(
-            "SELECT * FROM detection WHERE run_id=$1 ORDER BY id ASC", int(run["id"]))
+            "SELECT * FROM detection WHERE run_id=$1 ORDER BY id ASC", int(run["id"])
+        )
 
         logging.info(f"Updating {len(detections)} detection product")
 
