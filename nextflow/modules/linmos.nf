@@ -108,8 +108,8 @@ process linmos_mpi {
         #!/bin/bash
 
         if ! test -f ${mosaic[0]}; then
-            export OMP_NUM_THREADS=1
-            srun -N \$SLURM_NNODES -n \$SLURM_NTASKS -c \$SLURM_CPUS_PER_TASK \
+            export OMP_NUM_THREADS=\$SLURM_CPUS_PER_TASK
+            srun -N \$SLURM_NNODES -n \$SLURM_NTASKS -c \$SLURM_CPUS_PER_TASK --cpu-bind=cores \
                 singularity exec --bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT} \
                 ${askapsoft_image()} \
                 linmos-mpi -c ${job.config} -l ${templates}/linmos.log_cfg
