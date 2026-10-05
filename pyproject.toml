@@ -1,18 +1,36 @@
 [project]
-name = "aussrc-tools"
+name = "aussrc_pipeline_components"
 version = "0.1.0"
 description = "AusSRC data processing pipeline common Python utils"
 authors = [
     {name = "Austin Shen", email = "austin.shen@csiro.au"},
 ]
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">= 3.12"
 
 dependencies = [
-    "astropy"
+    "astropy",
+    "astroquery",
+    "asyncpg",
+    "jinja2",
+    "keyring",
+    "keyrings.alt",
+    "matplotlib",
+    "numpy",
+    "python-dotenv",
+    "pyvo",
+    "requests",
 ]
 
 [project.optional-dependencies]
+casa = [
+    "astropy_healpix",
+    "casatasks",
+    "casatools",
+    "pandas",
+    "pyregion",
+    "regions",
+]
 dev = [
     "ruff",
     "pytest",
@@ -23,6 +41,32 @@ dev = [
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = [
+    "aussrc_pipeline_components",
+    "aussrc_pipeline_components.casda",
+    "aussrc_pipeline_components.database",
+    "aussrc_pipeline_components.hpx_tiles",
+    "aussrc_pipeline_components.metadata",
+    "aussrc_pipeline_components.mom0",
+    "aussrc_pipeline_components.mosaicking",
+    "aussrc_pipeline_components.plots",
+    "aussrc_pipeline_components.source_finding",
+]
+
+[tool.setuptools.package-dir]
+aussrc_pipeline_components = "src"
+
+[tool.setuptools.package-data]
+aussrc_pipeline_components = [
+    "hpx_tiles/*.json",
+    "hpx_tiles/config/*.json",
+    "mosaicking/templates/*.j2",
+]
+
 [tool.black]
 line-length = 79
-target-version = ["py310"]
+target-version = ["py312"]
+
+[tool.ruff.lint]
+ignore = ["TRY002"]

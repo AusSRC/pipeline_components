@@ -1,7 +1,0 @@
-requests
-astropy
-astroquery==0.4.6
-asyncio
-asyncpg
-packaging
-python-dotenv
