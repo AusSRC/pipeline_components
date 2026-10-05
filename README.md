@@ -12,8 +12,8 @@ The Python code is installed as the `aussrc_pipeline_components` package in two 
 
 | Image | Dockerfile | Contents |
 | --- | --- | --- |
-| `aussrc/aussrc_tools` | [Dockerfile](Dockerfile) | All components except CASA tiling |
-| `aussrc/aussrc_tools_casa` | [Dockerfile.casa](Dockerfile.casa) | All components, plus CASA and the HPX tiling requirements |
+| `aussrc/pipeline_components` | [Dockerfile](Dockerfile) | All components except CASA tiling |
+| `aussrc/pipeline_components_casa` | [Dockerfile.casa](Dockerfile.casa) | All components, plus CASA and the HPX tiling requirements |
 
 Scripts are run as modules from inside the container
 
@@ -52,8 +52,8 @@ pip install -e ".[dev]"
 ### Building images
 
 ```
-docker build --platform linux/amd64 -t aussrc/aussrc_tools:<tag> .
-docker build --platform linux/amd64 -f Dockerfile.casa -t aussrc/aussrc_tools_casa:<tag> .
-docker push aussrc/aussrc_tools:<tag>
-docker push aussrc/aussrc_tools_casa:<tag>
+docker build --platform linux/amd64 -t aussrc/pipeline_components:<tag> .
+docker build --platform linux/amd64 -f Dockerfile.casa -t aussrc/pipeline_components_casa:<tag> .
+docker push aussrc/pipeline_components:<tag>
+docker push aussrc/pipeline_components_casa:<tag>
 ```
