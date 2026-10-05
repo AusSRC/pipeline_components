@@ -7,7 +7,7 @@ nextflow.enable.dsl = 2
 // ----------------------------------------------------------------------------------------
 
 process mosaic {
-    container = params.AUSSRC_TOOLS_IMAGE
+    container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:
@@ -46,7 +46,7 @@ process compress {
 }
 
 process plot_frequency_distribution {
-    container = params.AUSSRC_TOOLS_IMAGE
+    container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:
@@ -69,7 +69,7 @@ process plot_frequency_distribution {
 
 // Add a file to the run in the database. Not used by the workflows in this module.
 process database_insert {
-    container = params.AUSSRC_TOOLS_IMAGE
+    container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:

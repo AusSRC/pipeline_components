@@ -9,7 +9,7 @@ nextflow.enable.dsl = 2
 // aussrc_pipeline_components.database.
 //
 // Required params:
-//      AUSSRC_TOOLS_IMAGE      Container image with aussrc_pipeline_components installed
+//      AUSSRC_PIPELINE_COMPONENTS_IMAGE      Container image with aussrc_pipeline_components installed
 //      DATABASE_ENV            Database credentials file with DATABASE_HOST, DATABASE_NAME,
 //                              DATABASE_USER, DATABASE_PASSWORD, DATABASE_PORT and
 //                              DATABASE_SCHEMA
@@ -21,7 +21,7 @@ nextflow.enable.dsl = 2
 //
 //      create_run(moment0.out.done, run_name)
 process create_run {
-    container = params.AUSSRC_TOOLS_IMAGE
+    container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:

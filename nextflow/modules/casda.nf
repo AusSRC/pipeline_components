@@ -9,7 +9,7 @@ nextflow.enable.dsl = 2
 // These wrap aussrc_pipeline_components.casda.download and aussrc_pipeline_components.casda.download_evaluation_files.
 //
 // Required params:
-//      AUSSRC_TOOLS_IMAGE      Container image with aussrc_pipeline_components installed
+//      AUSSRC_PIPELINE_COMPONENTS_IMAGE      Container image with aussrc_pipeline_components installed
 //      CASDA_CREDENTIALS       CASDA credentials config file (section [CASDA] with username
 //                              and password)
 //      SCRATCH_ROOT            Scratch filesystem to bind into the container
@@ -38,7 +38,7 @@ nextflow.enable.dsl = 2
 // The download fails if the query does not return any files.
 
 process download {
-    container = params.AUSSRC_TOOLS_IMAGE
+    container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT} --bind \$HOME:\$HOME"
 
     errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
@@ -77,7 +77,7 @@ process download {
 // is written, the evaluation files are found in the output directory.
 
 process download_evaluation_files {
-    container = params.AUSSRC_TOOLS_IMAGE
+    container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT} --bind \$HOME:\$HOME"
 
     errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }

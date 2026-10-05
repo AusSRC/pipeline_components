@@ -16,7 +16,7 @@ nextflow.enable.dsl = 2
 // mosaicking step or be provided explicitly by the user.
 //
 // Required params:
-//      AUSSRC_TOOLS_IMAGE      Container image with aussrc_pipeline_components installed
+//      AUSSRC_PIPELINE_COMPONENTS_IMAGE      Container image with aussrc_pipeline_components installed
 //      S2P_SETUP_IMAGE         Container image for s2p_setup
 //      SOFIA_IMAGE             Container image for SoFiA-2
 //      SOFIAX_IMAGE            Container image for SoFiAX (run_sofiax only)
@@ -36,7 +36,7 @@ templates = "${moduleDir}/../templates"
 
 // Create the SoFiA-2 parameter file for the run from the template
 process sofia_parameter_file {
-    container = params.AUSSRC_TOOLS_IMAGE
+    container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:
@@ -136,7 +136,7 @@ process sofia {
 // Create the SoFiAX configuration file for the run from the template. Database details
 // are read from the credentials file.
 process update_sofiax_config {
-    container = params.AUSSRC_TOOLS_IMAGE
+    container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
     containerOptions = "--bind ${params.SCRATCH_ROOT}:${params.SCRATCH_ROOT}"
 
     input:
