@@ -4,36 +4,34 @@
 Plot summary figure for milky way detections (WALLABY)
 """
 
+import argparse
+import asyncio
 import io
+import logging
+import math
 import os
 import sys
-import math
-import asyncio
-import asyncpg
-import argparse
-import warnings
-import logging
-from dotenv import load_dotenv
 from functools import partial
 from itertools import islice
-import numpy as np
-import astropy.units as u
-from astropy.io import fits
-from astropy.wcs import WCS
-from astropy.visualization import PercentileInterval
-from astroquery.skyview import SkyView
-import matplotlib.pyplot as plt
 
+import astropy.units as u
+import asyncpg
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.io import fits
+from astropy.visualization import PercentileInterval
+from astropy.wcs import WCS
+from astroquery.skyview import SkyView
+from dotenv import load_dotenv
 
 # warnings.filterwarnings("ignore")
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-streamhdlr = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter(
-    fmt="%(asctime)s %(levelname)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
 )
-streamhdlr.setFormatter(formatter)
-logger.addHandler(streamhdlr)
+logger = logging.getLogger(__name__)
 
 
 C = 2.99792e8  # m/s
@@ -128,13 +126,13 @@ async def milkyway_summary(pool, points, detection):
 
     # Download DSS image from SkyView
     try:
-        logging.debug(f"Getting DSS image {clon} {clat}")
-        logging.debug(f"{width} {height}")
+        logger.debug(f"Getting DSS image {clon} {clat}")
+        logger.debug(f"{width} {height}")
         hdu_opt = await loop.run_in_executor(
             None,
             partial(
                 SkyView.get_images,
-                position="{}d {}d".format(clon, clat),
+                position=f"{clon}d {clat}d",
                 survey="DSS",
                 coordinates="J2000",
                 projection="Tan",
@@ -154,7 +152,7 @@ async def milkyway_summary(pool, points, detection):
         logger.error(
             f"Download error of DSS image for product id: {product_id}, error: {e}"
         )
-        raise e
+        raise
     logger.info(f"[{product_id}]: Downloaded DSS image")
 
     # Plot moment 0
@@ -306,7 +304,7 @@ async def main(argv):
         "database": os.environ["DATABASE_NAME"],
         "user": os.environ["DATABASE_USER"],
         "password": os.environ["DATABASE_PASSWORD"],
-        "port": os.getenv("DATABASE_PORT", 5432),
+        "port": os.getenv("DATABASE_PORT", "5432"),
     }
     pool = await asyncpg.create_pool(
         **db_creds, server_settings={"search_path": os.environ["DATABASE_SCHEMA"]}
@@ -345,7 +343,7 @@ async def main(argv):
         await asyncio.gather(*task_list)
 
         count += len(task_list)
-        logging.info(f"Processed {count} of {total} Run: {args.run}")
+        logger.info(f"Processed {count} of {total} Run: {args.run}")
 
     # Finish
     await pool.close()

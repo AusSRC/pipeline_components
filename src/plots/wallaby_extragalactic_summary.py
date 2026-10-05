@@ -5,40 +5,36 @@ Add summary figure to 'plot' column for WALLABY products
 
 """
 
+import argparse
+import asyncio
 import io
+import logging
+import math
 import os
 import sys
-import math
-import asyncio
-import asyncpg
-import argparse
-import logging
 import warnings
-from operator import sub
-from dotenv import load_dotenv
 from functools import partial
 from itertools import islice
 
-import numpy as np
+import astropy.units as u
+import asyncpg
 import matplotlib.pyplot as plt
+import numpy as np
+from astropy.io import fits
+from astropy.visualization import PercentileInterval
+from astropy.wcs import WCS
+from astroquery.skyview import SkyView
+from dotenv import load_dotenv
 from matplotlib.patches import Ellipse
 
-import astropy.units as u
-from astropy.io import fits
-from astropy.wcs import WCS
-from astropy.visualization import PercentileInterval
-from astroquery.skyview import SkyView
-
-
 warnings.filterwarnings("ignore")
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-streamhdlr = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter(
-    fmt="%(asctime)s %(levelname)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
 )
-streamhdlr.setFormatter(formatter)
-logger.addHandler(streamhdlr)
+logger = logging.getLogger(__name__)
 
 
 def get_aspect(ax):
@@ -59,7 +55,7 @@ async def summary_plot(pool, detection):
             )
 
         if not product:
-            logging.info("No products")
+            logger.info("No products")
             return
 
         if (
@@ -67,12 +63,12 @@ async def summary_plot(pool, detection):
             or product["mom1"] is None
             or product["spec"] is None
         ):
-            logging.warn(f"mom0, mom1 or spec missing for detection {detection['id']}")
+            logger.warning(f"mom0, mom1 or spec missing for detection {detection['id']}")
             return
 
         product_id = int(product["id"])
 
-        logging.info(f"Processing product id: {product_id}")
+        logger.info(f"Processing product id: {product_id}")
 
         # Plot figure size
         plt.rcParams["font.family"] = ["serif"]
@@ -135,7 +131,7 @@ async def summary_plot(pool, detection):
                 None,
                 partial(
                     SkyView.get_images,
-                    position="{}d {}d".format(clon, clat),
+                    position=f"{clon}d {clat}d",
                     survey="DSS",
                     coordinates="J2000",
                     projection="Tan",
@@ -151,10 +147,10 @@ async def summary_plot(pool, detection):
                 wcs_opt = WCS(hdu.header)
                 break
         except Exception as e:
-            logging.error(
+            logger.error(
                 f"Download error of DSS image for product id: {product_id}, error: {e}"
             )
-            raise e
+            raise
 
         # Plot moment 0
         ax2 = plt.subplot(2, 2, 1, projection=wcs)
@@ -246,14 +242,12 @@ async def summary_plot(pool, detection):
                 "UPDATE product SET plot=$1 WHERE id=$2", summary_plot, product_id
             )
 
-        logging.info(f"Updated product id: {product_id}")
+        logger.info(f"Updated product id: {product_id}")
 
-    except Exception as e:
-        logging.info(
-            "Update summary plot failed for detection %i %s"
-            % (int(detection["id"]), detection["name"])
+    except Exception:
+        logger.exception(
+            f"Update summary plot failed for detection {int(detection['id'])} {detection['name']}"
         )
-        logging.exception(e)
 
 
 async def main(argv):
@@ -290,7 +284,7 @@ async def main(argv):
         "database": os.environ["DATABASE_NAME"],
         "user": os.environ["DATABASE_USER"],
         "password": os.environ["DATABASE_PASSWORD"],
-        "port": os.getenv("DATABASE_PORT", 5432),
+        "port": os.getenv("DATABASE_PORT", "5432"),
     }
     schema = os.environ["DATABASE_SCHEMA"]
 
@@ -301,13 +295,13 @@ async def main(argv):
         if run is None:
             raise Exception(f"Run with name {args.run} could not be found")
 
-        logging.info(f"Adding DSS images to detection product in run {args.run}")
+        logger.info(f"Adding DSS images to detection product in run {args.run}")
 
         detections = await conn.fetch(
             "SELECT * FROM detection WHERE run_id=$1 ORDER BY id ASC", int(run["id"])
         )
 
-        logging.info(f"Updating {len(detections)} detection product")
+        logger.info(f"Updating {len(detections)} detection product")
 
     total = len(detections)
     count = 0
@@ -322,7 +316,7 @@ async def main(argv):
         await asyncio.gather(*task_list)
 
         count += len(task_list)
-        logging.info(f"Processed {count} of {total} Run: {args.run}")
+        logger.info(f"Processed {count} of {total} Run: {args.run}")
 
     await pool.close()
 

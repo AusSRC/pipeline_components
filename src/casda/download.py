@@ -36,24 +36,25 @@ DINGO
     "filename LIKE 'image.i.%.0.restored.conv.fits')"
 """
 
+import argparse
+import configparser
+import json
+import logging
 import os
 import sys
-import logging
-import json
-import argparse
-import astropy
-import configparser
-import keyring
-from keyrings.alt.file import PlaintextKeyring
-from astroquery.utils.tap.core import TapPlus
-from astroquery.casda import Casda
 
+import astropy
+import keyring
+from astroquery.casda import Casda
+from astroquery.utils.tap.core import TapPlus
+from keyrings.alt.file import PlaintextKeyring
 
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.INFO,
     format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
 )
+logger = logging.getLogger(__name__)
 
 astropy.utils.iers.conf.auto_download = False
 keyring.set_keyring(PlaintextKeyring())
@@ -102,11 +103,11 @@ def main(argv):
 
     """
     args = parse_args(argv)
-    logging.info(f"TAP Query: {args.query}")
+    logger.info(f"TAP Query: {args.query}")
     casdatap = TapPlus(url=URL, verbose=False)
     job = casdatap.launch_job_async(args.query)
     res = job.get_results()
-    logging.info(f"Query result: {res}")
+    logger.info(f"Query result: {res}")
     if len(res) == 0:
         raise Exception(f"No files found for TAP query: {args.query}")
 
@@ -119,7 +120,7 @@ def main(argv):
     casda = Casda()
     casda.login(username=parser["CASDA"]["username"])
     url_list = casda.stage_data(res, verbose=True)
-    logging.info(f"CASDA download staged data URLs: {url_list}")
+    logger.info(f"CASDA download staged data URLs: {url_list}")
 
     # Output directory ensure exists
     if not os.path.exists(args.output):
@@ -135,7 +136,7 @@ def main(argv):
         os.makedirs(directory)
     with open(args.manifest, "w") as outfile:
         outfile.write(json.dumps(file_list))
-        logging.info(f"Writing manifest complete: {args.manifest}")
+        logger.info(f"Writing manifest complete: {args.manifest}")
 
 
 if __name__ == "__main__":

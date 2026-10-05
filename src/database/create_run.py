@@ -5,16 +5,17 @@ Create a run entry in the survey database. Does nothing if a run with the
 same name already exists.
 """
 
-import os
-import sys
-import logging
 import argparse
 import asyncio
+import logging
+import os
+import sys
+
 import asyncpg
 from dotenv import load_dotenv
 
-
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 QUERY = (
@@ -49,7 +50,7 @@ async def main(argv):
         "database": os.environ["DATABASE_NAME"],
         "user": os.environ["DATABASE_USER"],
         "password": os.environ["DATABASE_PASSWORD"],
-        "port": os.getenv("DATABASE_PORT", 5432),
+        "port": os.getenv("DATABASE_PORT", "5432"),
     }
     schema = os.environ["DATABASE_SCHEMA"]
 
@@ -60,7 +61,7 @@ async def main(argv):
     async with conn.transaction():
         run = await conn.fetchrow(QUERY, args.run, args.sanity_thresholds)
         run_id = int(run["id"])
-        logging.info(f"Run {args.run} [{run_id}]")
+        logger.info(f"Run {args.run} [{run_id}]")
     await conn.close()
     return run_id
 

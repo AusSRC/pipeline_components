@@ -5,15 +5,16 @@ Update the header cards of all of the input fits files with the values provided.
 Used to bulk update the files with provenance information.
 """
 
+import asyncio
+import logging
 import os
 import sys
-import logging
-import asyncio
-from astropy.io import fits
 from argparse import ArgumentParser
 
+from astropy.io import fits
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def add_history_to_fits_header(file, index, history):
@@ -21,8 +22,7 @@ async def add_history_to_fits_header(file, index, history):
         header = hdul[index].header
         for value in history:
             header.add_history(value)
-        logging.info(f"Updated file {file} completed")
-    return
+        logger.info(f"Updated file {file} completed")
 
 
 async def main(argv):
@@ -46,12 +46,12 @@ async def main(argv):
     )
     args = parser.parse_args(argv)
 
-    logging.info(f"Adding the following history cards: {args.values}")
+    logger.info(f"Adding the following history cards: {args.values}")
     for f in args.files:
         if not os.path.exists(f):
-            logging.warning(f"Skipping {f}: file not found")
+            logger.warning(f"Skipping {f}: file not found")
             continue
-        logging.info(f"Updating file {f}")
+        logger.info(f"Updating file {f}")
         await add_history_to_fits_header(f, args.index, args.values)
 
 

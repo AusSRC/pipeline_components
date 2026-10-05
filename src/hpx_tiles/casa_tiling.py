@@ -9,26 +9,27 @@ The tiling map [csv] is created by `generate_tile_pixel_map.py`.
 The files will be written to an output directory under a subdirectory given by the observation id.
 """
 
+import argparse
+import csv
+import logging
+import math
 import os
 import sys
-import numpy as np
-import csv
 import time
-import math
-import argparse
-import logging
-from casatasks import imhead, imregrid, exportfits  # type: ignore
-from regions import PolygonSkyRegion
-from astropy.io import fits
-from astropy import wcs
-from astropy import units as u
-from astropy_healpix import HEALPix
-from astropy.coordinates import SkyCoord
 
+import numpy as np
+from astropy import units as u
+from astropy import wcs
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+from astropy_healpix import HEALPix
+from casatasks import exportfits, imhead, imregrid  # type: ignore
+from regions import PolygonSkyRegion
 
 HDU_CARDS_IN_BLOCK = 36  # 2880/80
 FITS_BLOCK = 2880
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def tile_id_to_region(tile_id, nside=32):
@@ -113,105 +114,103 @@ def create_nan_tile(
 
     header_options = ["CRVAL", "CDELT", "CRPIX", "CUNIT"]  # 'CTYPE',
 
-    with fits.open(original_image) as hdul_o:
-        with fits.open(
-            template_fits
-        ) as hdul_t:  # hdul_t will be overwritten with nan tile
-            # Get NAXIS for template and input file
-            naxis_template = hdul_t[0].header["NAXIS"]
-            naxis_original = hdul_o[0].header["NAXIS"]
+    # hdul_t will be overwritten with nan tile
+    with fits.open(original_image) as hdul_o, fits.open(template_fits) as hdul_t:
+        # Get NAXIS for template and input file
+        naxis_template = hdul_t[0].header["NAXIS"]
+        naxis_original = hdul_o[0].header["NAXIS"]
 
-            if naxis_original != naxis_template:
-                raise ValueError(
-                    f"Please provide template file with same naxis as input cube. Currently its {naxis_template} vs {naxis_original}"
+        if naxis_original != naxis_template:
+            raise ValueError(
+                f"Please provide template file with same naxis as input cube. Currently its {naxis_template} vs {naxis_original}"
+            )
+
+        # Check assumption that first two axes in the header are RA DEC
+        assert "RA" in hdul_t[0].header["CTYPE1"], (
+            f"Expected RA in template.fits first axis, got {hdul_t[0].header['CTYPE1']}"
+        )
+        assert "DEC" in hdul_t[0].header["CTYPE2"], (
+            f"Expected DEC in template.fits second axis, got {hdul_t[0].header['CTYPE2']}"
+        )
+
+        # Make sure template follows the RA,DEC,freq,stokes axis ordering. Decided by technical-core team
+        # NOTE: for intermediate partial tiles it was decided that we keep the ra, dec, stokes, freq order for mosaicking with linmos
+        assert "STOKES" in hdul_t[0].header["CTYPE3"], (
+            "template fits file should have axis order RA,DEC,STOKES,FREQ"
+        )
+        assert "FREQ" in hdul_t[0].header["CTYPE4"], (
+            "template fits file should have axis order RA,DEC,STOKES,FREQ"
+        )
+
+        # Update BMAJ and BMIN in header where appropriate
+        try:
+            hdul_t[0].header["BMAJ"] = hdul_o[0].header["BMAJ"]
+            hdul_t[0].header["BMIN"] = hdul_o[0].header["BMIN"]
+        except KeyError as e:
+            logger.warning(f"Update BMAJ and BMIN in header failed: {e}")
+
+        # which leads to assumption that last two axes in numpy array are DEC, RA
+        shape_o = hdul_o[0].data.shape[:-2]
+        shape_t = hdul_t[0].data.shape[2:]
+        # new tile should be same RA,DEC shape as template, but freq,stokes shape from original file
+        shape_new = shape_o + shape_t
+
+        # create NaN tile data shape
+        data_new = (
+            np.zeros(shape_new, dtype=np.float32) * np.nan
+        )  # Make sure dtype is float32
+
+        # Check if the input file has the same axis ordering of the template file.
+        # By default, we expect cubes to have RA,DEC,STOKES,FREQ
+        # but the template fits file will have RA,DEC,FREQ,STOKES
+
+        axis_dict = {}
+        # Input image and template image 3rd / 4th axis is the same:
+        if hdul_t[0].header["CTYPE3"] == hdul_o[0].header["CTYPE3"]:
+            axis_dict[3] = 3
+        if hdul_t[0].header["CTYPE4"] == hdul_o[0].header["CTYPE4"]:
+            axis_dict[4] = 4
+        # Input image and template image 3rd / 4th axis is different
+        if hdul_t[0].header["CTYPE3"] == hdul_o[0].header["CTYPE4"]:
+            axis_dict[3] = 4
+        if hdul_t[0].header["CTYPE4"] == hdul_o[0].header["CTYPE3"]:
+            axis_dict[4] = 3
+
+        # Take 3rd and 4th axis values from input image and put them into header in correct order
+        for option in header_options:
+            for i in range(3, naxis_original + 1):  # i.e. [3,4] if NAXIS=4
+                # if verbose
+                logger.info(
+                    f"Setting hdul_t {option}{i} from {hdul_t[0].header[f'{option}{i}']} to {hdul_o[0].header[f'{option}{axis_dict[i]}']}"
                 )
 
-            # Check assumption that first two axes in the header are RA DEC
-            assert "RA" in hdul_t[0].header["CTYPE1"], (
-                f"Expected RA in template.fits first axis, got {hdul_t[0].header['CTYPE1']}"
-            )
-            assert "DEC" in hdul_t[0].header["CTYPE2"], (
-                f"Expected DEC in template.fits second axis, got {hdul_t[0].header['CTYPE2']}"
-            )
-
-            # Make sure template follows the RA,DEC,freq,stokes axis ordering. Decided by technical-core team
-            # NOTE: for intermediate partial tiles it was decided that we keep the ra, dec, stokes, freq order for mosaicking with linmos
-            assert "STOKES" in hdul_t[0].header["CTYPE3"], (
-                "template fits file should have axis order RA,DEC,STOKES,FREQ"
-            )
-            assert "FREQ" in hdul_t[0].header["CTYPE4"], (
-                "template fits file should have axis order RA,DEC,STOKES,FREQ"
-            )
-
-            # Update BMAJ and BMIN in header where appropriate
-            try:
-                hdul_t[0].header["BMAJ"] = hdul_o[0].header["BMAJ"]
-                hdul_t[0].header["BMIN"] = hdul_o[0].header["BMIN"]
-            except Exception as e:
-                logging.warning(f"Update BMAJ and BMIN in header failed: {e}")
-
-            # which leads to assumption that last two axes in numpy array are DEC, RA
-            shape_o = hdul_o[0].data.shape[:-2]
-            shape_t = hdul_t[0].data.shape[2:]
-            # new tile should be same RA,DEC shape as template, but freq,stokes shape from original file
-            shape_new = shape_o + shape_t
-
-            # create NaN tile data shape
-            data_new = (
-                np.zeros(shape_new, dtype=np.float32) * np.nan
-            )  # Make sure dtype is float32
-
-            # Check if the input file has the same axis ordering of the template file.
-            # By default, we expect cubes to have RA,DEC,STOKES,FREQ
-            # but the template fits file will have RA,DEC,FREQ,STOKES
-
-            axis_dict = {}
-            # Input image and template image 3rd / 4th axis is the same:
-            if hdul_t[0].header["CTYPE3"] == hdul_o[0].header["CTYPE3"]:
-                axis_dict[3] = 3
-            if hdul_t[0].header["CTYPE4"] == hdul_o[0].header["CTYPE4"]:
-                axis_dict[4] = 4
-            # Input image and template image 3rd / 4th axis is different
-            if hdul_t[0].header["CTYPE3"] == hdul_o[0].header["CTYPE4"]:
-                axis_dict[3] = 4
-            if hdul_t[0].header["CTYPE4"] == hdul_o[0].header["CTYPE3"]:
-                axis_dict[4] = 3
-
-            # Take 3rd and 4th axis values from input image and put them into header in correct order
-            for option in header_options:
-                for i in range(3, naxis_original + 1):  # i.e. [3,4] if NAXIS=4
-                    # if verbose
-                    logging.info(
-                        f"Setting hdul_t {option}{i} from {hdul_t[0].header[f'{option}{i}']} to {hdul_o[0].header[f'{option}{axis_dict[i]}']}"
-                    )
-
-                    hdul_t[0].header[f"{option}{i}"] = str(
-                        hdul_o[0].header[f"{option}{axis_dict[i]}"]
-                    )
-
-            # If input image and template image had different axis ordering, we have to swap data axes
-            if (axis_dict[3] == 4) and (axis_dict[4] == 3):
-                # Go to STOKES,FREQ,RA,DEC
-                data_new = np.moveaxis(data_new, 1, 0)
-                logging.info(
-                    f"Swapped input data 3rd and 4th axis. Shape now is {data_new.shape}"
+                hdul_t[0].header[f"{option}{i}"] = str(
+                    hdul_o[0].header[f"{option}{axis_dict[i]}"]
                 )
 
-            # adjust header CRPIX as well
-            hdul_t[0].header["CRPIX1"] = crpix1
-            hdul_t[0].header["CRPIX2"] = crpix2
-            for i in range(2, len(shape_new)):
-                # remember start counting at NAXIS1, so NAXIS3 is first non-angular coordinate
-                # and np.array() is inverted shape from fits header
-                # print(f"NAXIS{i+1} = {shape_new[::-1][i]}" )
+        # If input image and template image had different axis ordering, we have to swap data axes
+        if (axis_dict[3] == 4) and (axis_dict[4] == 3):
+            # Go to STOKES,FREQ,RA,DEC
+            data_new = np.moveaxis(data_new, 1, 0)
+            logger.info(
+                f"Swapped input data 3rd and 4th axis. Shape now is {data_new.shape}"
+            )
 
-                hdul_t[0].header[f"NAXIS{i}"] = shape_new[::-1][i]
-                hdul_t[0].header[f"NAXIS{i}"] = shape_new[::-1][i]
+        # adjust header CRPIX as well
+        hdul_t[0].header["CRPIX1"] = crpix1
+        hdul_t[0].header["CRPIX2"] = crpix2
+        for i in range(2, len(shape_new)):
+            # remember start counting at NAXIS1, so NAXIS3 is first non-angular coordinate
+            # and np.array() is inverted shape from fits header
+            # print(f"NAXIS{i+1} = {shape_new[::-1][i]}" )
 
-            hdul_t[0].data = data_new
-            hdul_t[0].writeto(
-                outfile, overwrite=overwrite
-            )  # should be the first of its name
+            hdul_t[0].header[f"NAXIS{i}"] = shape_new[::-1][i]
+            hdul_t[0].header[f"NAXIS{i}"] = shape_new[::-1][i]
+
+        hdul_t[0].data = data_new
+        hdul_t[0].writeto(
+            outfile, overwrite=overwrite
+        )  # should be the first of its name
 
 
 def parse_args(argv):
@@ -278,7 +277,7 @@ def main(argv):
 
     # Create output directories if they do not exist
     if not os.path.exists(output_dir):
-        logging.info(
+        logger.info(
             f"Output directory not found. Creating new directory: {output_dir}"
         )
         os.makedirs(output_dir, exist_ok=True)
@@ -295,26 +294,26 @@ def main(argv):
             crpix2.append(float(row["CRPIX_DEC"]))
 
     # Read input image cube header
-    logging.info("Getting header")
+    logger.info("Getting header")
     fitsheader = imhead(image_cube)
     axis = fitsheader["axisnames"]
-    logging.info(axis)
+    logger.info(axis)
 
     # Read tile template header
-    logging.info("Getting regridding template")
+    logger.info("Getting regridding template")
     template_header = imregrid(imagename=tile_template, template="get", overwrite=True)
 
     # Starting the tiling
-    logging.info("CASA tiling")
+    logger.info("CASA tiling")
     start = time.time()
     for i, (ra, dec) in enumerate(zip(crpix1, crpix2)):
         pixel_id = int(pixel_ids[i])
-        logging.info(f"Regridding tile {pixel_id} ({i + 1} / {len(crpix1)})")
+        logger.info(f"Regridding tile {pixel_id} ({i + 1} / {len(crpix1)})")
         inner_start = time.time()
 
         # Update the template header dictionary from / for imregrid
         template_header["csys"]["direction0"]["crpix"] = np.array([ra, dec])
-        output_filename = "%s_%s-%d.image" % (prefix, obs_id, pixel_id)
+        output_filename = f"{prefix}_{obs_id}-{pixel_id}.image"
         casa_image = os.path.join(output_dir, output_filename)
         fits_image = casa_image.split(".image")[0] + ".fits"
 
@@ -329,17 +328,17 @@ def main(argv):
                 header_size = math.ceil(len(header) / HDU_CARDS_IN_BLOCK) * FITS_BLOCK
                 filesize = os.path.getsize(fits_image)
                 if filesize == (header_size + data_size):
-                    logging.info(
+                    logger.info(
                         f"Output file already exists at {fits_image} and is correct size. Skipping."
                     )
                     continue
                 else:
-                    logging.info(
+                    logger.info(
                         f"Output file already exists at {fits_image} but is an incorrect size. Reprocessing."
                     )
-        except Exception as e:
-            logging.exception(e)
-            logging.info("Error. Reprocessing tile anyway.")
+        except Exception:
+            logger.exception(f"Error checking output file {fits_image}")
+            logger.info("Error. Reprocessing tile anyway.")
 
         try:
             # Update template header
@@ -375,7 +374,7 @@ def main(argv):
             )
 
             # Tiling to CASA image
-            logging.debug("Performing CASA tiling")
+            logger.debug("Performing CASA tiling")
             imregrid(
                 imagename=image_cube,
                 template=template_header,
@@ -386,7 +385,7 @@ def main(argv):
             )
 
             # Convert CASA image to fits image
-            logging.debug("Converting CASA image to fits image")
+            logger.debug("Converting CASA image to fits image")
             exportfits(
                 imagename=casa_image,
                 fitsimage=fits_image,
@@ -395,18 +394,16 @@ def main(argv):
             )
 
             # Cleanup CASA image
-            logging.debug("Deleting CASA image")
+            logger.debug("Deleting CASA image")
             os.system(f"rm -rf {casa_image}")
-            logging.info(
-                "Tiling pixel %d completed in %.3f s"
-                % (pixel_id, (time.time() - inner_start))
+            logger.info(
+                f"Tiling pixel {pixel_id} completed in {time.time() - inner_start:.3f} s"
             )
 
-        except Exception as e:
-            logging.error(
+        except Exception:
+            logger.exception(
                 f"Error tiling {pixel_id} for observation {obs_id}. Generating NaN tile"
             )
-            logging.error(f"Error message: {e}")
             create_nan_tile(
                 image_cube,
                 tile_template,
@@ -415,11 +412,9 @@ def main(argv):
                 overwrite=True,
             )
 
-    logging.info(
-        "Tiling for observation %s completed. Time elapsed is %.3f seconds."
-        % (obs_id, (time.time() - start))
+    logger.info(
+        f"Tiling for observation {obs_id} completed. Time elapsed is {time.time() - start:.3f} seconds."
     )
-    return
 
 
 if __name__ == "__main__":

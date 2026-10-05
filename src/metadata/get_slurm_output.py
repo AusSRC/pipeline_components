@@ -5,19 +5,20 @@ Get the relevant metadata from the evaluation files (slurmOutput) and write to d
 This is required for WALLABY to track beam information.
 """
 
-import os
-import sys
+import argparse
+import asyncio
+import configparser
 import glob
 import json
-import tarfile
-import argparse
-import configparser
 import logging
-import asyncio
+import os
+import sys
+import tarfile
+
 import asyncpg
 
-
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def parse_args(argv):
@@ -55,6 +56,18 @@ def parse_args(argv):
     return args
 
 
+def read_slurm_parameters(filename):
+    """Read the parameters (key=value lines) of a slurm log file into a
+    string that can be parsed as a [SLURM] config section."""
+    config_string = "[SLURM]\n"
+    with open(filename, "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            if ("=" in line) and (line[0] != "#"):
+                config_string += line
+    return config_string
+
+
 async def main(argv):
     args = parse_args(argv)
     db_parser = configparser.ConfigParser()
@@ -68,14 +81,14 @@ async def main(argv):
     # check content for slurm logs
     slurm_logs_map = {}
     filelist = glob.glob(f"{args.files}/*")
-    logging.info(f"Found the following files: {args.files}")
+    logger.info(f"Found the following files: {args.files}")
     tarfiles = [f for f in filelist if (("checksum" not in f) and (".tar" in f))]
-    logging.info(f"Compressed files: {tarfiles}")
+    logger.info(f"Compressed files: {tarfiles}")
     for tf in tarfiles:
         with tarfile.open(tf) as tar:
-            logging.info(tf)
+            logger.info(tf)
             files = [ti.name for ti in tar.getmembers() if args.keyword in ti.name]
-            logging.info(f"Contains: {files}")
+            logger.info(f"Contains: {files}")
             for f in files:
                 slurm_logs_map[f] = tf
 
@@ -85,9 +98,9 @@ async def main(argv):
     # extract config
     config = {}
     if len(slurm_logs) == 0:
-        logging.error("No slurmOutput log files found.")
+        logger.error("No slurmOutput log files found.")
     else:
-        logging.info(f"Slurm log files: {slurm_logs}")
+        logger.info(f"Slurm log files: {slurm_logs}")
         for log in slurm_logs:
             if not bool(config):
                 # extract if does not exist
@@ -96,31 +109,26 @@ async def main(argv):
                         tar.extractall(args.files)
 
                 # parse and construct parameter dictionary
-                logging.info(f"Reading slurm log file {args.files}/{log}")
-                config_string = "[SLURM]\n"
-                with open(f"{args.files}/{log}", "r") as f:
-                    lines = f.readlines()
-                    for line in lines:
-                        if ("=" in line) and (line[0] != "#"):
-                            config_string += line
+                logger.info(f"Reading slurm log file {args.files}/{log}")
+                config_string = read_slurm_parameters(f"{args.files}/{log}")
 
                 log_parser = configparser.ConfigParser(
                     strict=False, allow_no_value=True
                 )
-                logging.info(f"File content:\n{config_string}")
+                logger.info(f"File content:\n{config_string}")
                 log_parser.read_string(config_string)
                 keys = list(log_parser["SLURM"].keys())
                 for key in keys:
                     try:
                         value = log_parser["SLURM"].get(key)
                         config[key] = value
-                    except Exception as e:
-                        logging.warning(
+                    except configparser.Error as e:
+                        logger.warning(
                             f"Unable to parse config item {key} with error: {e}"
                         )
-                logging.info(f"Constructed slurmOutput: {config}")
+                logger.info(f"Constructed slurmOutput: {config}")
             else:
-                logging.info("Logs extracted, preparing to write to database")
+                logger.info("Logs extracted, preparing to write to database")
                 break
 
     # add to database
@@ -137,8 +145,8 @@ async def main(argv):
         )
         if obs is None:
             raise Exception(f"No observation in WALLABY database for SBID={args.sbid}")
-        logging.info(f"Found observation: {obs}")
-        logging.info(f"Updating metadata for observation {obs['id']}")
+        logger.info(f"Found observation: {obs}")
+        logger.info(f"Updating metadata for observation {obs['id']}")
         await conn.execute(
             "INSERT INTO wallaby.observation_metadata (observation_id, slurm_output) \
             VALUES ($1, $2) \

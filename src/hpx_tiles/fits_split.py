@@ -1,7 +1,8 @@
-import os
-import math
 import argparse
 import logging
+import math
+import os
+
 from astropy.io import fits
 
 HDU_CARDS_IN_BLOCK = 36  # 2880/80
@@ -107,12 +108,12 @@ def split_fits(infile, outpath, part):
             header_size = math.ceil(len(header) / HDU_CARDS_IN_BLOCK) * FITS_BLOCK
             filesize = os.path.getsize(out_filename)
             if filesize == (header_size + data_size):
-                logging.info(
+                logger.info(
                     f"Output file already exists at {out_filename} and is correct size. Skipping."
                 )
                 return
             else:
-                logging.info(
+                logger.info(
                     f"Output file already exists at {out_filename} but is an incorrect size. Reprocessing."
                 )
 
@@ -124,8 +125,8 @@ def split_fits(infile, outpath, part):
                     f"Output file contains expected number of channels ({upper - lower + 1}). Skipping."
                 )
                 return
-    except Exception as e:
-        logger.exception(e)
+    except Exception:
+        logger.exception(f"Error checking output file {out_filename}")
         logger.info("Error. Re-splitting data cube")
 
     logger.info(f"Creating {out_filename}")
@@ -145,9 +146,7 @@ def split_fits(infile, outpath, part):
 
         with open(infile, "rb") as in_obj:
             in_obj.seek(header_size + (lower * image_size))
-            count = 0
-            for i in range(lower, upper + 1):
-                count += 1
+            for count, i in enumerate(range(lower, upper + 1), start=1):
                 image_bytes = in_obj.read(image_size)
                 if not image_bytes:
                     raise Exception("Unable to read bytes")

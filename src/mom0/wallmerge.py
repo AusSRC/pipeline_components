@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+
 import numpy as np
 from astropy.io import fits
 
@@ -16,7 +17,7 @@ def main():
     try:
         hdu_cubes = [fits.open(url) for url in filename_cubes]
         hdu0_cubes = [hdu[0] for hdu in hdu_cubes]
-    except Exception:
+    except OSError:
         sys.stderr.write("Failed to read data cube. Please check your input.\n")
         sys.exit(1)
 
@@ -24,7 +25,7 @@ def main():
     axes = int(hdu0_cubes[0].header["NAXIS"])
     naxis = [
         [
-            int(hdu0_cubes[cube].header["NAXIS{:d}".format(axis + 1)])
+            int(hdu0_cubes[cube].header[f"NAXIS{axis + 1:d}"])
             for axis in range(axes)
         ]
         for cube in range(len(hdu0_cubes))
@@ -34,7 +35,7 @@ def main():
 
     # Extract reference pixels from all cubes
     crpix = [
-        [hdu0_cubes[cube].header["CRPIX{:d}".format(axis + 1)] for axis in range(axes)]
+        [hdu0_cubes[cube].header[f"CRPIX{axis + 1:d}"] for axis in range(axes)]
         for cube in range(len(hdu0_cubes))
     ]
 
@@ -62,7 +63,7 @@ def main():
 
     # Update reference pixel
     for axis in range(axes):
-        hdu_data_out.header.set("crpix{:d}".format(axis + 1), offset_out[axis])
+        hdu_data_out.header.set(f"crpix{axis + 1:d}", offset_out[axis])
 
     # Copy individual cubelets into output cube
     for cube in range(len(hdu0_cubes)):

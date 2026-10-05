@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import sys
-import argparse
-from jinja2 import Template
 
+from jinja2 import Template
 
 LINMOS_CONFIG_TEMPLATE = f"{os.path.dirname(__file__)}/templates/linmos_config.j2"
 
@@ -94,7 +94,6 @@ def main(argv):
     with open(args.output, "w") as f:
         f.writelines(config)
 
-    return
 
 
 if __name__ == "__main__":

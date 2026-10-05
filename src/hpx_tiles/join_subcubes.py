@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
+import argparse
+import logging
 import os
 import sys
-import logging
-import argparse
+
 import numpy as np
 from astropy.io import fits
 
-
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def parse_args(argv):
@@ -62,8 +63,8 @@ def main(argv):
 
     # NOTE: Order of files here determines how they are joined...
     files.sort(key=split_key)
-    logging.info(f"Joining fits files: {files}")
-    logging.info(f"Joining on axis {args.axis}")
+    logger.info(f"Joining fits files: {files}")
+    logger.info(f"Joining on axis {args.axis}")
 
     # Check axis that contains CTYPE defined by user argument.
     # NOTE: assumes all files have the same axis order
@@ -72,10 +73,10 @@ def main(argv):
         header = hdul[0].header
         naxis = int(header["NAXIS"])
         for i in range(naxis):
-            card = str(header[f"CTYPE{str(i + 1)}"]).strip()
+            card = str(header[f"CTYPE{i + 1!s}"]).strip()
             if card == args.axis:
                 axis = naxis - (i + 1)
-                logging.info(f"Joining on data axis {axis} for {args.axis}")
+                logger.info(f"Joining on data axis {axis} for {args.axis}")
                 break
     if axis is None:
         raise Exception(f"Did not find axis in fits header to join on: {args.axis}")
@@ -85,24 +86,24 @@ def main(argv):
             raise Exception(f"Sub-cube file at {files} not found.")
         size = os.path.getsize(f)
         filename = os.path.basename(f)
-        logging.info(f"Sub-cube {filename} size: {size / 1e9} GB")
+        logger.info(f"Sub-cube {filename} size: {size / 1e9} GB")
         with fits.open(f) as hdul:
             if data is None:
                 header = hdul[0].header
-                logging.info(
+                logger.info(
                     f"{header['CTYPE1']}, {header['CTYPE2']}, {header['CTYPE3']}, {header['CTYPE4']}"
                 )
                 data = hdul[0].data
             else:
                 data = np.concatenate((data, hdul[0].data), axis=axis)
-            logging.info(f"Output data shape: {data.shape}")
+            logger.info(f"Output data shape: {data.shape}")
 
     # Cast certain header card values to float
     write_header = header.copy()
     prefixes = ["CRPIX", "CRVAL", "CDELT"]
     for idx in range(naxis):
         for prefix in prefixes:
-            card = f"{prefix}{str(idx + 1)}"
+            card = f"{prefix}{idx + 1!s}"
             write_header.set(card, float(write_header[card]))
 
     hdu = fits.PrimaryHDU(header=write_header, data=data)

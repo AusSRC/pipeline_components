@@ -5,14 +5,15 @@ Plot detection x frequency distribution to help with quality checking
 
 """
 
-import os
-import sys
-import math
 import argparse
 import asyncio
+import math
+import os
+import sys
+
 import asyncpg
-from dotenv import load_dotenv
 import matplotlib.pyplot as plt
+from dotenv import load_dotenv
 
 plt.rcParams["figure.figsize"] = (40, 24)
 plt.rcParams.update({"font.size": 24})
@@ -31,7 +32,7 @@ async def main(argv):
         "database": os.environ["DATABASE_NAME"],
         "user": os.environ["DATABASE_USER"],
         "password": os.environ["DATABASE_PASSWORD"],
-        "port": os.getenv("DATABASE_PORT", 5432),
+        "port": os.getenv("DATABASE_PORT", "5432"),
     }
     schema = os.environ["DATABASE_SCHEMA"]
 
@@ -44,7 +45,6 @@ async def main(argv):
         "SELECT (name, f_sum, freq) FROM detection WHERE run_id=$1", int(run["id"])
     )
     data = [d["row"] for d in data]
-    detections = [d[0] for d in list(data)]
     f_sum = [math.log10(float(d[1])) for d in list(data)]
     freq = [float(d[2]) / 1e9 for d in list(data)]
 

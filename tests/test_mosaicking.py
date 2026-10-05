@@ -2,8 +2,8 @@
 
 import os
 import unittest
-from aussrc_pipeline_components.mosaicking import update_linmos_config
 
+from aussrc_pipeline_components.mosaicking import update_linmos_config
 
 DEFAULT_CONTENT = """
 linmos.names                = [image.restored.SB100.cube.contsub,image.restored.SB200.cube.contsub]
@@ -18,7 +18,7 @@ linmos.imageaccess          = collective
 linmos.imageaccess.axis     = 3
 linmos.imageaccess.order    = distributed
 linmos.imageaccess.write    = parallel
-""".strip()  # noqa
+""".strip()
 
 
 class TestUpdateLinmosConfig(unittest.TestCase):
@@ -57,7 +57,7 @@ class TestUpdateLinmosConfig(unittest.TestCase):
             "[image.restored.SB100.cube.contsub,image.restored.SB200.cube.contsub]",
         )
 
-        files = "[image.restored.SB400.cube.contsub.fits,image.restored.SB500.cube.contsub.fits]"  # noqa
+        files = "[image.restored.SB400.cube.contsub.fits,image.restored.SB500.cube.contsub.fits]"
         update_linmos_config.main(
             [
                 "--config",

@@ -67,3 +67,6 @@ aussrc_pipeline_components = [
 [tool.black]
 line-length = 79
 target-version = ["py312"]
+
+[tool.ruff.lint]
+ignore = ["TRY002"]

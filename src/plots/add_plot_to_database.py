@@ -4,16 +4,17 @@
 Upload plots as bytes to database table.
 """
 
-import os
-import sys
-import logging
 import argparse
 import asyncio
+import logging
+import os
+import sys
+
 import asyncpg
 from dotenv import load_dotenv
 
-
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_QUERY = "INSERT INTO $TABLE (run_id, $COLUMN) VALUES ($1, $2) ON CONFLICT (run_id) DO UPDATE SET $COLUMN = $2;"
@@ -56,30 +57,30 @@ async def main(argv):
         "database": os.environ["DATABASE_NAME"],
         "user": os.environ["DATABASE_USER"],
         "password": os.environ["DATABASE_PASSWORD"],
-        "port": os.getenv("DATABASE_PORT", 5432),
+        "port": os.getenv("DATABASE_PORT", "5432"),
     }
     schema = os.environ["DATABASE_SCHEMA"]
 
     # Get detections
     query = args.query.replace("$TABLE", args.table)
     query = query.replace("$COLUMN", args.column)
-    logging.info(query)
+    logger.info(query)
     conn = await asyncpg.connect(
         dsn=None, **d_dsn, server_settings={"search_path": schema}
     )
     async with conn.transaction():
         run = await conn.fetchrow("SELECT * FROM run WHERE name=$1", args.run)
-        logging.info(run)
+        logger.info(run)
         if not run:
-            logging.info(f"Run with name {args.run} not found. Creating.")
+            logger.info(f"Run with name {args.run} not found. Creating.")
             res = await conn.execute(
                 "INSERT INTO run (name, sanity_thresholds) VALUES ($1, '{}')", args.run
             )
             run = await conn.fetchrow("SELECT * FROM run WHERE name=$1", args.run)
         run_id = int(run["id"])
-        logging.info(f"Inserting into run {args.run} [{run_id}]")
+        logger.info(f"Inserting into run {args.run} [{run_id}]")
         res = await conn.fetchrow(query, run_id, filebytes)
-        logging.info(res)
+        logger.info(res)
     await conn.close()
     return 0
 

@@ -4,14 +4,15 @@
 Add metadata to FITS header
 """
 
+import argparse
+import logging
 import os
 import sys
-import logging
-import argparse
+
 from astropy.io import fits
 
-
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def main(argv):
@@ -34,7 +35,7 @@ def main(argv):
         required=False,
     )
     args = parser.parse_args(argv)
-    logging.info(args)
+    logger.info(args)
 
     # Assert key value length are the same
     assert len(args.keys) == len(args.values), (
@@ -43,12 +44,12 @@ def main(argv):
     kv_dict = {}
     for i, v in enumerate(args.values):
         key = args.keys[i]
-        if key in kv_dict.keys():
-            value = kv_dict[key].append(v)
+        if key in kv_dict:
+            kv_dict[key].append(v)
         else:
             kv_dict[key] = [v]
 
-    logging.info(kv_dict)
+    logger.info(kv_dict)
 
     # Open fits cubes
     for f in args.image_cubes:
@@ -64,10 +65,10 @@ def main(argv):
                     if k in hdr and k != "HISTORY" and k != "COMMENT":
                         v_upd = f"{hdr[k]} {v}"
                         hdr[k] = v_upd.replace("\n", " ")
-                        logging.info(f"[{f}] Updating header {k} = {v_upd}")
+                        logger.info(f"[{f}] Updating header {k} = {v_upd}")
                     else:
                         hdr[k] = v
-                        logging.info(f"[{f}] Added to header {k} = {v}")
+                        logger.info(f"[{f}] Added to header {k} = {v}")
 
 
 if __name__ == "__main__":

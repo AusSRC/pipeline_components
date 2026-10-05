@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
+import argparse
+import glob
+import logging
 import os
 import sys
-import glob
 import tarfile
-import argparse
-import logging
-from pathlib import Path
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def parse_args(argv):
@@ -96,7 +98,8 @@ def main(argv):
                     member.name = os.path.basename(member.name)
                     try:
                         tar.extract(member, args.output)
-                    except Exception as e:
+                    except (tarfile.TarError, OSError) as e:
+                        logger.warning(f"Unable to extract {member.name} from {tf}: {e}")
                         continue
                     full_path = f"{args.output}/{member.name}"
                     if os.path.islink(full_path):

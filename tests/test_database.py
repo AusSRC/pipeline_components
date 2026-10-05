@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-import os
 import asyncio
+import os
 import unittest
 from unittest import mock
+
 from aussrc_pipeline_components.database import create_run
 
 
@@ -31,9 +32,12 @@ class TestCreateRun(unittest.TestCase):
         conn.transaction.return_value.__aexit__ = mock.AsyncMock(return_value=False)
 
         # database.env is loaded into the environment, restore it after the test
-        with mock.patch.dict(os.environ), mock.patch.object(
-            create_run.asyncpg, "connect", mock.AsyncMock(return_value=conn)
-        ) as connect:
+        with (
+            mock.patch.dict(os.environ),
+            mock.patch.object(
+                create_run.asyncpg, "connect", mock.AsyncMock(return_value=conn)
+            ) as connect,
+        ):
             run_id = asyncio.run(create_run.main(["-r", "run_name", "-e", self.db_env]))
 
         self.assertEqual(run_id, 7)

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-import os
-import sys
-from dotenv import load_dotenv
 import argparse
 import configparser
+import os
+import sys
+
+from dotenv import load_dotenv
 
 
 def parse_args(argv):
@@ -60,19 +61,19 @@ def main(argv):
     args_dict = vars(args)
 
     # get database credentials from file
-    if getattr(args, "database") is not None:
+    if args.database is not None:
         load_dotenv(args.database)
-        if getattr(args, "db_hostname") is None:
+        if args.db_hostname is None:
             args_dict["db_hostname"] = os.environ["DATABASE_HOST"]
-        if getattr(args, "db_name") is None:
+        if args.db_name is None:
             args_dict["db_name"] = os.environ["DATABASE_NAME"]
-        if getattr(args, "db_username") is None:
+        if args.db_username is None:
             args_dict["db_username"] = os.environ["DATABASE_USER"]
-        if getattr(args, "db_password") is None:
+        if args.db_password is None:
             args_dict["db_password"] = os.environ["DATABASE_PASSWORD"]
-        if getattr(args, "db_schema") is None:
+        if args.db_schema is None:
             args_dict["db_schema"] = os.environ.get("DATABASE_SCHEMA")
-        if getattr(args, "db_port") is None:
+        if args.db_port is None:
             args_dict["db_port"] = os.environ.get("DATABASE_PORT")
 
     # update config

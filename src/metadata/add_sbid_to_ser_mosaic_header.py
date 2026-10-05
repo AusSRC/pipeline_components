@@ -6,17 +6,18 @@ For a given source extraction region (SER), after mosaicking, we will add the SB
 to the header of the mosaic file. This requires a couple of SQL queries to the WALLABY database.
 """
 
-import os
-import sys
-import asyncpg
 import asyncio
 import logging
+import os
+import sys
 from argparse import ArgumentParser
+
+import asyncpg
 from astropy.io import fits
 from dotenv import load_dotenv
 
-
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def main(argv):
@@ -25,7 +26,7 @@ async def main(argv):
     parser.add_argument("-f", dest="file", help="Input mosaicked image file path")
     parser.add_argument("-e", dest="env", help="Database credentials environment file")
     args = parser.parse_args(argv)
-    logging.info(args)
+    logger.info(args)
 
     assert os.path.exists(args.file), "File does not exist"
     assert os.path.exists(args.env), "Database environment file does not exist"
@@ -43,11 +44,11 @@ async def main(argv):
     conn = await asyncpg.connect(
         dsn=None, **dsn, server_settings={"search_path": schema}
     )
-    logging.info("Established database connection")
+    logger.info("Established database connection")
     res = await conn.fetchrow(
         "SELECT * FROM source_extraction_region WHERE name=$1", args.ser
     )
-    logging.info(res)
+    logger.info(res)
     if res is None:
         raise Exception("Source extraction region does not exist")
 
@@ -61,19 +62,19 @@ async def main(argv):
         """
         obs_ids = []
         footprints = await conn.fetch(footprints_for_ser_query, args.ser)
-        logging.info(footprints)
+        logger.info(footprints)
         for record in footprints:
             obs_ids.append(int(record["footprint_A"]))
             obs_ids.append(int(record["footprint_B"]))
-        logging.info(obs_ids)
+        logger.info(obs_ids)
 
         sbid_list = None
         sbid_query = f"SELECT sbid FROM observation WHERE id in {tuple(obs_ids)}"
-        logging.info(sbid_query)
+        logger.info(sbid_query)
         res = await conn.fetch(sbid_query)
-        logging.info(res)
-        sbid_list = " ".join([r["sbid"].strip("ASKAP-") for r in res])
-        logging.info(sbid_list)
+        logger.info(res)
+        sbid_list = " ".join([r["sbid"].removeprefix("ASKAP-") for r in res])
+        logger.info(sbid_list)
 
     await conn.close()
 
@@ -81,7 +82,7 @@ async def main(argv):
     with fits.open(args.file, mode="update") as hdu:
         hdr = hdu[0].header
         hdr["SBID"] = sbid_list
-    logging.info(f"Added sbids {sbid_list} to fits cube {args.file}")
+    logger.info(f"Added sbids {sbid_list} to fits cube {args.file}")
 
 
 if __name__ == "__main__":

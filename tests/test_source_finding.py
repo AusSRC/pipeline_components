@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import os
 import configparser
+import os
 import unittest
+
 from aussrc_pipeline_components.source_finding import update_sofiax_config
 
 

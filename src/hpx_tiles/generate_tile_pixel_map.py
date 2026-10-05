@@ -17,30 +17,31 @@ Output:
 Author: Lerato
 """
 
-import os
-import sys
-import numpy
-import logging
-import pandas as pd
-from astropy_healpix import HEALPix
-from astropy.coordinates import Angle
-from astropy import units as u
-import pyregion
-from astropy.io import fits
-from astropy.wcs import WCS
-import json
 import argparse
 import csv
+import json
+import logging
+import os
+import sys
 
+import numpy
+import pandas as pd
+import pyregion
+from astropy import units as u
+from astropy.coordinates import Angle
+from astropy.io import fits
+from astropy.wcs import WCS
+from astropy_healpix import HEALPix
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def hms2deg(hms):
     """Converts unit from hms to degrees"""
 
     h, m, s = hms.split(":")
-    a = Angle("%sh%sm%s" % (h, m, s))
+    a = Angle(f"{h}h{m}m{s}")
     return a.deg
 
 
@@ -48,7 +49,7 @@ def dms2deg(dms):
     """Converts unit from dms to degrees"""
 
     d, m, s = dms.split(":")
-    a = Angle("%sd%sm%s" % (d, m, s))
+    a = Angle(f"{d}d{m}m{s}")
     return a.deg
 
 
@@ -125,22 +126,13 @@ def generate_DS9_polygons(healpix_pixel, nside, outname_prefix):
         RA, DEC = corner.value
         RA = RA[0]
         DEC = DEC[0]
-        polygon_string = "polygon(%f, %f, %f, %f, %f, %f, %f, %f)" % (
-            RA[0],
-            DEC[0],
-            RA[1],
-            DEC[1],
-            RA[2],
-            DEC[2],
-            RA[3],
-            DEC[3],
-        )
+        polygon_string = f"polygon({RA[0]:f}, {DEC[0]:f}, {RA[1]:f}, {DEC[1]:f}, {RA[2]:f}, {DEC[2]:f}, {RA[3]:f}, {DEC[3]:f})"
         regions.append(polygon_string)
 
         center = hp.healpix_to_lonlat(pixel) * u.deg
         center_RA, center_DEC = center.value
 
-        circle_string = "circle(%f, %f, %f)" % (center_RA, center_DEC, 0.1)
+        circle_string = f"circle({center_RA:f}, {center_DEC:f}, {0.1:f})"
         centers.append(circle_string)
 
         text_string = f"text {center_RA} {center_DEC} {{{pixel}}}"
@@ -155,31 +147,26 @@ def generate_DS9_polygons(healpix_pixel, nside, outname_prefix):
     SB = outname_prefix
 
     # boundary region file
-    region_file = open("%s-boundary-%d.reg" % (SB, nside), "w")
-    region_file.write(first_line)
-    region_file.write(second_line)
-    region_file.write(third_line)
-    for region in regions:
-        region_file.write(region + " \n")
-    region_file.close()
+    with open(f"{SB}-boundary-{nside}.reg", "w") as region_file:
+        region_file.write(first_line)
+        region_file.write(second_line)
+        region_file.write(third_line)
+        region_file.writelines(region + " \n" for region in regions)
 
     # centers region file
-    center_file = open("%s-center-%d.reg" % (SB, nside), "w")
-    center_file.write(first_line)
-    center_file.write(second_line)
-    center_file.write(third_line)
-    for center in centers:
-        center_file.write(center + " \n")
-    center_file.close()
+    with open(f"{SB}-center-{nside}.reg", "w") as center_file:
+        center_file.write(first_line)
+        center_file.write(second_line)
+        center_file.write(third_line)
+        for center in centers:
+            center_file.write(center + " \n")
 
     # text region file
-    text_file = open("%s-text-%d.reg" % (SB, nside), "w")
-    text_file.write(first_line)
-    text_file.write(second_line)
-    text_file.write(third_line)
-    for text in texts:
-        text_file.write(text + " \n")
-    text_file.close()
+    with open(f"{SB}-text-{nside}.reg", "w") as text_file:
+        text_file.write(first_line)
+        text_file.write(second_line)
+        text_file.write(third_line)
+        text_file.writelines(text + " \n" for text in texts)
 
 
 def reference_header(naxis, cdelt):
@@ -197,8 +184,8 @@ def reference_header(naxis, cdelt):
     hdr = "SIMPLE  =                    T / file does conform to FITS standard \n"
     hdr += "BITPIX  =                  -32 / number of bits per data pixel \n"
     hdr += "NAXIS   =                    2 / number of data axes  \n"
-    hdr += "NAXIS1  =                %d / length of data axis 1 \n" % naxis
-    hdr += "NAXIS2  =                %d / length of data axis 2 \n" % naxis
+    hdr += f"NAXIS1  =                {naxis} / length of data axis 1 \n"
+    hdr += f"NAXIS2  =                {naxis} / length of data axis 2 \n"
     hdr += "EXTEND  =                    F / No FITS extensions are present \n"
     # NOTE: update adding 0.5 to CRPIX 1/2 to fix [2049, 2049, X, X] shape error
     hdr += "CRPIX1  =             %r / Coordinate reference pixel \n" % (
@@ -211,8 +198,8 @@ def reference_header(naxis, cdelt):
     hdr += "PC1_2   =           0.70710677 / Transformation matrix element \n"
     hdr += "PC2_1   =           -0.70710677 / Transformation matrix element \n"
     hdr += "PC2_2   =           0.70710677 / Transformation matrix element \n"
-    hdr += "CDELT1  =            -%r  / [deg] Coordinate increment \n" % cdelt
-    hdr += "CDELT2  =             %r  / [deg] Coordinate increment \n" % cdelt
+    hdr += f"CDELT1  =            -{cdelt!r}  / [deg] Coordinate increment \n"
+    hdr += f"CDELT2  =             {cdelt!r}  / [deg] Coordinate increment \n"
     hdr += "CTYPE1  = 'RA---HPX'           / Right ascension in an HPX projection \n"
     hdr += "CTYPE2  = 'DEC--HPX'           / Declination in an HPX projection \n"
     hdr += "CRVAL1  =                   0. / [deg] Right ascension at the reference point \n"
@@ -286,7 +273,7 @@ def parse_args(argv):
 
 def main(argv):
     args = parse_args(argv)
-    logging.info(args)
+    logger.info(args)
 
     # if not os.path.exists(args.output):
     try:
@@ -303,7 +290,7 @@ def main(argv):
     footprint = args.file
     if not os.path.exists(footprint):
         raise Exception(f"Footprint file not found at {footprint}")
-    logging.info(f"Footprint file: {footprint}")
+    logger.info(f"Footprint file: {footprint}")
 
     # healpix tile configuration and beam information
     nside = tile_config["nside"]
@@ -317,9 +304,9 @@ def main(argv):
     global hp
     hp = HEALPix(nside=nside, order="ring", frame="icrs")
 
-    logging.info("Number of pixels for nside %d is %d. " % (nside, hp.npix))
-    logging.info(
-        "HealPix pixel resolution for nside %d is %s." % (nside, hp.pixel_resolution)
+    logger.info(f"Number of pixels for nside {nside} is {hp.npix}. ")
+    logger.info(
+        f"HealPix pixel resolution for nside {nside} is {hp.pixel_resolution}."
     )
 
     hpx_id_pixels = {}
@@ -348,11 +335,11 @@ def main(argv):
     )
     hpx_pixels.append(healpixels)
     footprint_ids.append(footprint_id)
-    hpx_id_pixels.update({"%s" % footprint_id: healpixels})
+    hpx_id_pixels.update({f"{footprint_id}": healpixels})
 
     # read the reference header to estimate pixel centers in degrees, J2000.
     HPX_hdr = reference_header(naxis=naxis, cdelt=cdelt)
-    HPX_hdr = fits.Header.fromstring("""%s""" % HPX_hdr, sep="\n")
+    HPX_hdr = fits.Header.fromstring(f"""{HPX_hdr}""", sep="\n")
     HPX_wcs = WCS(HPX_hdr)
     crpix_ra, crpix_dec, hpx_ra, hpx_dec = tile_number_to_tile_parameters(
         Nside=nside, hpx_ids=hpx_pixels, tile_size=naxis, hpx_wcs=HPX_wcs
@@ -361,9 +348,9 @@ def main(argv):
     # TODO: loop not necessary
     # iterate over pixels to write pixel map
     for i in range(len(footprint_ids)):
-        csv_filename = "%s_%s.csv" % (args.prefix, footprint_id)
+        csv_filename = f"{args.prefix}_{footprint_id}.csv"
         csv_tile_output = os.path.join(args.output, csv_filename)
-        logging.info(f"Writing pixel map to {csv_tile_output}")
+        logger.info(f"Writing pixel map to {csv_tile_output}")
         with open(csv_tile_output, "w", newline="") as f:
             writer = csv.writer(f)
             data = [
@@ -391,7 +378,7 @@ def main(argv):
     for hpxs in HPX_PIXELS:
         for SBid in footprint_ids:
             if hpxs in set(hpx_id_pixels[SBid]):
-                SBs_HPX.append((hpxs))
+                SBs_HPX.append(hpxs)
                 SBsID.append(SBid)
 
     csv_repeat_tiles = args.output + "_REPEAT.csv"
@@ -414,7 +401,7 @@ def main(argv):
         if data:
             maximum_number_SBs = max([len(n) for n in data])
             csv_header = numpy.hstack(
-                ["PIXEL", ["SB%d" % i for i in range(1, maximum_number_SBs)]]
+                ["PIXEL", [f"SB{i}" for i in range(1, maximum_number_SBs)]]
             ).tolist()
             writer.writerow(csv_header)
             writer.writerows(data)
@@ -424,7 +411,7 @@ def main(argv):
                 os.remove(csv_repeat_tiles)
 
     if args.regions:
-        logging.info("Writing DS9 region files")
+        logger.info("Writing DS9 region files")
         generate_DS9_polygons(
             healpix_pixel=HPX_PIXELS,
             nside=nside,

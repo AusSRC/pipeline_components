@@ -5,19 +5,20 @@ Plot detection x frequency distribution to help with quality checking
 Use XML files
 """
 
+import argparse
+import glob
+import logging
 import os
 import sys
-import glob
-import math
-import argparse
-import logging
+
+import matplotlib.pyplot as plt
 import numpy as np
-from astropy.table import vstack
 from astropy.io import ascii
 from astropy.io.votable import parse
-import matplotlib.pyplot as plt
+from astropy.table import vstack
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 plt.rcParams["figure.figsize"] = (40, 24)
 plt.rcParams.update({"font.size": 24})
@@ -39,27 +40,27 @@ def main(argv):
 
     # Read XML
     files = glob.glob(os.path.join(args.input, "*.xml"))
-    logging.info(files)
+    logger.info(files)
     if not files:
-        logging.info("No VOtable files found")
+        logger.info("No VOtable files found")
         return
     detection_table = None
     for f in files:
         votable = parse(f)
         resource = votable.resources[0]
         params = resource.params
-        input_region = eval([p for p in params if p.name == "input.region"][0].value)
+        input_region = eval(next(p for p in params if p.name == "input.region").value)
         (xmin, _, ymin, _, zmin, _) = input_region
         table = votable.get_first_table().to_table()
         table["x"] = table["x"] + xmin
         table["y"] = table["y"] + ymin
         table["z"] = table["z"] + zmin
-        logging.info(f"Joining {f} with {len(table)} rows")
+        logger.info(f"Joining {f} with {len(table)} rows")
         if detection_table is None:
             detection_table = table
             continue
         detection_table = vstack([detection_table, table])
-    logging.debug(detection_table)
+    logger.debug(detection_table)
 
     f_sum = np.log10(np.array(detection_table["f_sum"].data))
     freq = np.array(detection_table["freq"].data) / 1e9
@@ -79,7 +80,7 @@ def main(argv):
     plt.grid()
     plt.title(str(args.run_name))
     plt.savefig(args.output)
-    logging.info(f"Flux vs frequency plot produced at {args.output}")
+    logger.info(f"Flux vs frequency plot produced at {args.output}")
 
 
 if __name__ == "__main__":
