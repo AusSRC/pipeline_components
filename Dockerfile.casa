@@ -6,7 +6,7 @@ ENV PYTHONNOUSERSITE=1
 
 RUN apt-get update && apt-get install -y gcc procps
 
-# Install aussrc_tools and requirements with CASA
+# Install aussrc_pipeline_components and requirements with CASA
 COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install --upgrade pip && pip install ".[casa]"

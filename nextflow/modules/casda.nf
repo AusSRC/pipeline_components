@@ -6,10 +6,10 @@ nextflow.enable.dsl = 2
 // CASDA download
 //
 // Generic processes for downloading ASKAP data products and evaluation files from CASDA.
-// These wrap aussrc_tools.casda.download and aussrc_tools.casda.download_evaluation_files.
+// These wrap aussrc_pipeline_components.casda.download and aussrc_pipeline_components.casda.download_evaluation_files.
 //
 // Required params:
-//      AUSSRC_TOOLS_IMAGE      Container image with aussrc_tools installed
+//      AUSSRC_TOOLS_IMAGE      Container image with aussrc_pipeline_components installed
 //      CASDA_CREDENTIALS       CASDA credentials config file (section [CASDA] with username
 //                              and password)
 //      SCRATCH_ROOT            Scratch filesystem to bind into the container
@@ -57,7 +57,7 @@ process download {
         #!/bin/bash
 
         if [ ! -f "$manifest" ]; then
-            python3 -u -m aussrc_tools.casda.download \
+            python3 -u -m aussrc_pipeline_components.casda.download \
                 -q "$query" \
                 -o $output_dir \
                 -m $manifest \
@@ -96,7 +96,7 @@ process download_evaluation_files {
         """
         #!/bin/bash
 
-        python3 -u -m aussrc_tools.casda.download_evaluation_files \
+        python3 -u -m aussrc_pipeline_components.casda.download_evaluation_files \
             -s $sbid \
             -p $codes \
             -o $output_dir \

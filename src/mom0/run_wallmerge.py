@@ -17,7 +17,7 @@ def main():
     cube_files = glob.glob(f"{output_directory}/*_mom0.fits")
     cube_files_str = ",".join(cube_files)
 
-    cmd = f"{sys.executable} -m aussrc_tools.mom0.wallmerge {cube_files_str} {output_file}"
+    cmd = f"{sys.executable} -m aussrc_pipeline_components.mom0.wallmerge {cube_files_str} {output_file}"
     os.system(cmd)
 
 

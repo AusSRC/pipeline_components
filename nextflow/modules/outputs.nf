@@ -21,7 +21,7 @@ process mosaic {
     script:
         """
         #!/bin/bash
-        python3 -u -m aussrc_tools.mom0.run_wallmerge \
+        python3 -u -m aussrc_pipeline_components.mom0.run_wallmerge \
             $output_directory \
             $output_file
         """
@@ -62,7 +62,7 @@ process plot_frequency_distribution {
         """
         #!/bin/bash
 
-        python3 -m aussrc_tools.plots.plot_frequency_distribution_xml \
+        python3 -m aussrc_pipeline_components.plots.plot_frequency_distribution_xml \
             -r $run_name -i $output_directory -o $output_file
         """
 }
@@ -86,7 +86,7 @@ process database_insert {
         """
         #!/bin/bash
 
-        python3 -m aussrc_tools.plots.add_plot_to_database \
+        python3 -m aussrc_pipeline_components.plots.add_plot_to_database \
             -c $column -r $run_name -e $database_env -f $file
         """
 }

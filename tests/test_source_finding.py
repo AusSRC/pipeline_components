@@ -3,7 +3,7 @@
 import os
 import configparser
 import unittest
-from aussrc_tools.source_finding import update_sofiax_config
+from aussrc_pipeline_components.source_finding import update_sofiax_config
 
 
 class TestUpdateSoFiAXConfig(unittest.TestCase):

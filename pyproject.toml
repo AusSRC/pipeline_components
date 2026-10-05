@@ -1,5 +1,5 @@
 [project]
-name = "aussrc-tools"
+name = "aussrc_pipeline_components"
 version = "0.1.0"
 description = "AusSRC data processing pipeline common Python utils"
 authors = [
@@ -41,11 +41,24 @@ dev = [
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+packages = [
+    "aussrc_pipeline_components",
+    "aussrc_pipeline_components.casda",
+    "aussrc_pipeline_components.database",
+    "aussrc_pipeline_components.hpx_tiles",
+    "aussrc_pipeline_components.metadata",
+    "aussrc_pipeline_components.mom0",
+    "aussrc_pipeline_components.mosaicking",
+    "aussrc_pipeline_components.plots",
+    "aussrc_pipeline_components.source_finding",
+]
+
+[tool.setuptools.package-dir]
+aussrc_pipeline_components = "src"
 
 [tool.setuptools.package-data]
-aussrc_tools = [
+aussrc_pipeline_components = [
     "hpx_tiles/*.json",
     "hpx_tiles/config/*.json",
     "mosaicking/templates/*.j2",

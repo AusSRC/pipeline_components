@@ -16,7 +16,7 @@ nextflow.enable.dsl = 2
 // mosaicking step or be provided explicitly by the user.
 //
 // Required params:
-//      AUSSRC_TOOLS_IMAGE      Container image with aussrc_tools installed
+//      AUSSRC_TOOLS_IMAGE      Container image with aussrc_pipeline_components installed
 //      S2P_SETUP_IMAGE         Container image for s2p_setup
 //      SOFIA_IMAGE             Container image for SoFiA-2
 //      SOFIAX_IMAGE            Container image for SoFiAX (run_sofiax only)
@@ -151,7 +151,7 @@ process update_sofiax_config {
         """
         #!/bin/bash
 
-        python3 -u -m aussrc_tools.source_finding.update_sofiax_config \
+        python3 -u -m aussrc_pipeline_components.source_finding.update_sofiax_config \
             --config ${templates}/sofiax.j2 \
             --database ${params.DATABASE_ENV} \
             --output $sofiax_config \
