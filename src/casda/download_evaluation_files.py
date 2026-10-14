@@ -15,6 +15,7 @@ import keyring
 import requests
 from astropy.table import Table
 from astroquery.casda import Casda
+from aussrc_pipeline_components.casda.urls import encode_query_plus
 from keyrings.alt.file import PlaintextKeyring
 
 logging.basicConfig(
@@ -109,7 +110,9 @@ def main(argv):
         os.makedirs(args.output)
 
     # CASDA download
-    url_list = [url for url in url_list if not url.endswith("checksum")]
+    url_list = [
+        encode_query_plus(url) for url in url_list if not url.endswith("checksum")
+    ]
     file_list = casda.download_files(url_list, savedir=args.output)
 
     logger.info(file_list)
