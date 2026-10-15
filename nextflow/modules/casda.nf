@@ -34,8 +34,9 @@ nextflow.enable.dsl = 2
 // characters " $ ` or \
 //
 // The manifest is a JSON list of the paths of the downloaded files. It is only written once
-// all files have been downloaded, so the download is skipped if the manifest already exists.
-// The download fails if the query does not return any files.
+// all files have been downloaded, so the download is skipped if the manifest exists and all of
+// the files listed in it are on disk. Otherwise the download is run again, keeping any files
+// that are already complete. The download fails if the query does not return any files.
 
 process download {
     container = params.AUSSRC_PIPELINE_COMPONENTS_IMAGE
@@ -57,7 +58,10 @@ process download {
         """
         #!/bin/bash
 
-        if [ ! -f "$manifest" ]; then
+        # Skip the download if the manifest exists and all of the files listed in it are on disk
+        if python3 -c "import json, os, sys; sys.exit(not all(os.path.exists(f) for f in json.load(open('$manifest'))))" 2>/dev/null; then
+            echo "All files in $manifest exist, skipping download"
+        else
             python3 -u -m aussrc_pipeline_components.casda.download \
                 -q "$query" \
                 -o $output_dir \
