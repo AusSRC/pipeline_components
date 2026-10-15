@@ -161,8 +161,9 @@ async def milkyway_summary(pool, points, detection):
     ax2.grid(color="grey", ls="solid")
     ax2.set_xlabel("Right ascension (J2000)")
     ax2.set_ylabel("Declination (J2000)")
-    ax2.tick_params(axis="x", which="both", left=False, right=False)
-    ax2.tick_params(axis="y", which="both", top=False, bottom=False)
+    # RA ticks on the bottom and top, Dec ticks on the left and right
+    ax2.coords[0].set_ticks_position("bt")
+    ax2.coords[1].set_ticks_position("lr")
     ax2.set_title("moment 0")
     ar = get_aspect(ax2)
 
@@ -181,8 +182,9 @@ async def milkyway_summary(pool, points, detection):
     ax.grid(color="grey", ls="solid")
     ax.set_xlabel("Right ascension (J2000)")
     ax.set_ylabel("Declination (J2000)")
-    ax.tick_params(axis="x", which="both", left=False, right=False)
-    ax.tick_params(axis="y", which="both", top=False, bottom=False)
+    # RA ticks on the bottom and top, Dec ticks on the left and right
+    ax.coords[0].set_ticks_position("bt")
+    ax.coords[1].set_ticks_position("lr")
     ax.set_title("DSS + moment 0")
 
     # Plot moment 1
@@ -200,8 +202,9 @@ async def milkyway_summary(pool, points, detection):
     ax3.grid(color="grey", ls="solid")
     ax3.set_xlabel("Right ascension (J2000)")
     ax3.set_ylabel("Declination (J2000)")
-    ax3.tick_params(axis="x", which="both", left=False, right=False)
-    ax3.tick_params(axis="y", which="both", top=False, bottom=False)
+    # RA ticks on the bottom and top, Dec ticks on the left and right
+    ax3.coords[0].set_ticks_position("bt")
+    ax3.coords[1].set_ticks_position("lr")
     ax3.set_title("moment 1")
 
     # Plot spectrum

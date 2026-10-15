@@ -43,6 +43,7 @@ process download {
 
     errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
     maxErrors 10
+    maxRetries 5
 
     input:
         val query
@@ -82,6 +83,7 @@ process download_evaluation_files {
 
     errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
     maxErrors 3
+    maxRetries 5
 
     input:
         val sbid
