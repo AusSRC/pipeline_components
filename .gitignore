@@ -144,6 +144,7 @@ run.py
 test.txt
 *.env
 *.ini
+!nextflow/templates/*.ini
 .vscode
 *.fits
 .DS_Store

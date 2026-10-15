@@ -1,0 +1,7 @@
+# Write the linmos log to the standard output
+log4j.rootLogger = DEBUG,default.console
+
+log4j.appender.default.console = org.apache.log4j.ConsoleAppender
+log4j.appender.default.console.threshold = INFO
+log4j.appender.default.console.layout = org.apache.log4j.PatternLayout
+log4j.appender.default.console.layout.ConversionPattern = %-5p %c{2} (%X{mpirank}, %X{hostname}) [%d] - %m%n

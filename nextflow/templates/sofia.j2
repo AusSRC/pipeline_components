@@ -1,0 +1,134 @@
+# SoFiA 2 parameter file
+
+# Global settings
+
+pipeline.verbose           = false
+pipeline.pedantic          = true
+pipeline.threads           = 0
+
+
+# Input
+
+input.data                 =
+input.region               =
+input.gain                 =
+input.noise                =
+input.weights              =
+input.mask                 =
+input.invert               = false
+
+
+# Flagging
+
+flag.region                =
+flag.catalog               = {{ catalog }}
+flag.radius                = 5
+flag.auto                  = true
+flag.threshold             = 7
+flag.log                   = true
+
+
+# Continuum subtraction
+
+contsub.enable             =  true
+contsub.order              =  1
+contsub.threshold          =  2.0
+contsub.shift              =  5
+contsub.padding            =  5
+
+
+# Noise scaling
+
+scaleNoise.enable          = true
+scaleNoise.mode            = local
+scaleNoise.windowXY        = 51
+scaleNoise.windowZ         = 51
+scaleNoise.gridXY          = 0
+scaleNoise.gridZ           = 0
+scaleNoise.interpolate     = true
+scaleNoise.scfind          = false
+
+
+# Ripple filter
+
+background.enable          =  true
+background.statistic       =  median
+background.windowXY        =  75
+background.windowZ         =  75
+background.gridXY          =  0
+background.gridZ           =  0
+background.interpolate     =  true
+
+
+# S+C finder
+
+scfind.enable              = true
+scfind.kernelsXY           = 0, 5, 10
+scfind.kernelsZ            = 0, 3, 7, 15, 31
+scfind.threshold           = 3.8
+scfind.replacement         = 2.0
+scfind.statistic           = mad
+scfind.fluxRange           = negative
+
+
+# Threshold finder
+
+threshold.enable           = false
+threshold.threshold        = 5
+threshold.mode             = relative
+threshold.statistic        = mad
+threshold.fluxRange        = negative
+
+
+# Linker
+
+linker.radiusXY            = 2
+linker.radiusZ             = 3
+linker.minSizeXY           = 5
+linker.minSizeZ            = 5
+linker.maxSizeXY           = 0
+linker.maxSizeZ            = 0
+
+
+# Filter
+
+filter.discardNegative     = true
+filter.minSNR              = 3.0
+
+
+
+# Reliability
+
+reliability.enable         = true
+reliability.threshold      = 0.7
+reliability.scaleKernel    = 0.2
+reliability.plot           = true
+
+
+# Parameterisation
+
+parameter.enable           = true
+parameter.wcs              = true
+parameter.physical         = true
+parameter.prefix           = SoFiA
+parameter.offset           = false
+
+
+# Output
+
+output.directory           =
+output.filename            = sofia_output
+output.writeCatASCII       = true
+output.writeCatXML         = true
+output.writeCatSQL         = true
+output.writeNoise          = false
+output.writeFiltered       = false
+output.writeMask           = false
+output.writeMask2d         = true
+output.writeRawMask        = false
+output.writeMoments        = true
+output.writeCubelets       = true
+output.marginCubeletsXY    = 10
+output.marginCubeletsZ     = 10
+output.overwrite           = true
+output.writePV             = true

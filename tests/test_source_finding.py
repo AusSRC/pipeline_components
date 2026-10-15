@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-import os
 import configparser
+import os
 import unittest
-from source_finding import update_sofiax_config
+
+from aussrc_pipeline_components.source_finding import update_sofiax_config
 
 
 class TestUpdateSoFiAXConfig(unittest.TestCase):
@@ -102,6 +103,32 @@ class TestUpdateSoFiAXConfig(unittest.TestCase):
         config.optionxform = str
         config.read(self.sofiax_config)
         self.assertEqual(config.get("SoFiAX", "db_hostname"), "localhost")
+
+    def test_update_from_template(self):
+        """Fill the SoFiAX template. Schema and port are set from the
+        database.env file when provided, otherwise they are removed."""
+        template = f"{os.path.dirname(__file__)}/../nextflow/templates/sofiax.j2"
+        args = ["--config", template, "--output", self.sofiax_config]
+        args += ["--database", self.db_env, "--run_name", "run_name"]
+
+        update_sofiax_config.main(args)
+        config = configparser.RawConfigParser()
+        config.optionxform = str
+        config.read(self.sofiax_config)
+        self.assertEqual(config.get("SoFiAX", "db_name"), "name")
+        self.assertEqual(config.get("SoFiAX", "run_name"), "run_name")
+        self.assertFalse(config.has_option("SoFiAX", "db_schema"))
+        self.assertFalse(config.has_option("SoFiAX", "db_port"))
+
+        with open(self.db_env, "a") as f:
+            f.write("DATABASE_SCHEMA = survey\n")
+            f.write("DATABASE_PORT = 5433\n")
+        update_sofiax_config.main(args)
+        config = configparser.RawConfigParser()
+        config.optionxform = str
+        config.read(self.sofiax_config)
+        self.assertEqual(config.get("SoFiAX", "db_schema"), "survey")
+        self.assertEqual(config.get("SoFiAX", "db_port"), "5433")
 
 
 if __name__ == "__main__":
